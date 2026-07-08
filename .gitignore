@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+*.xcodeproj
+.DS_Store
+dist/
+memory.md
+*.swp
