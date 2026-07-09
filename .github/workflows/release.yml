@@ -1,0 +1,32 @@
+name: Release
+
+# On version-tag push (e.g. v1.0.0): build .app + .dmg + .zip and create a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # needed to create the release
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift 6 toolchain (latest Xcode)
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+
+      - name: .app + .dmg build
+        run: ./Scripts/build-app.sh --dmg
+
+      - name: .zip the .app (ditto — preserves signature/attributes)
+        run: ditto -c -k --keepParent "dist/Transmission Remote GUI.app" "dist/Transmission Remote GUI.app.zip"
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/Transmission Remote GUI.dmg" "dist/Transmission Remote GUI.app.zip" \
+            --title "$GITHUB_REF_NAME" --generate-notes
