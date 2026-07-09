@@ -1,0 +1,33 @@
+# Transmission Remote GUI
+
+> A free, open-source (MIT) native macOS remote GUI for the Transmission
+> BitTorrent daemon. Built in SwiftUI for macOS 14+, it is a modern alternative
+> to transgui (transmission-remote-gui), adding sequential streaming, RSS
+> auto-download, labels/filters, live speed graphs, a bandwidth scheduler, and
+> mTLS. Current version 0.1.4.
+
+## Key facts
+- Name: Transmission Remote GUI
+- Platform: macOS 14 (Sonoma) or later, Apple Silicon and Intel
+- Price: Free (no paid tier, no subscription)
+- License: MIT (open source)
+- Built with: SwiftUI (native macOS); UI in English and Hungarian
+- Category: BitTorrent remote-control client / Transmission RPC front-end
+- Alternative to: transgui / transmission-remote-gui (classic cross-platform Lazarus app)
+- Requires: a running Transmission daemon with RPC enabled (NAS, seedbox, Raspberry Pi, home server)
+- Install: brew install --cask epaxpax/tap/transmission-remote-gui-macos, or download the .dmg
+
+## Links
+- Homepage: https://epaxpax.github.io/transmission-remote-gui/
+- Source & releases: https://github.com/epaxpax/transmission-remote-gui
+- Latest .dmg: https://github.com/epaxpax/transmission-remote-gui/releases/latest
+- License: https://opensource.org/licenses/MIT
+
+## Features
+- Sequential streaming download (Transmission 4.1+) — watch media while downloading
+- RSS auto-download with title-match text/regex rules and dedup
+- Labels and sidebar filtering
+- Live speed graphs, Statistics panel, and menu-bar popover
+- Bandwidth scheduler with turbo/turtle modes by time and day
+- Optional per-server mTLS client-certificate authentication
+- Multiple servers, Keychain-stored passwords, auto-connect

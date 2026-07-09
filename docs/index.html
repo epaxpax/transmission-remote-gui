@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transmission Remote GUI — native macOS torrent client (transgui alternative)</title>
+<meta name="description" content="Native SwiftUI macOS remote for the Transmission BitTorrent daemon. A modern transgui alternative with sequential streaming, RSS, labels, and speed graphs. Free &amp; open source.">
+<link rel="canonical" href="https://epaxpax.github.io/transmission-remote-gui/">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%A2%3C/text%3E%3C/svg%3E">
+
+<!-- Open Graph / social -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Transmission Remote GUI — native macOS remote">
+<meta property="og:description" content="Modern SwiftUI macOS remote for the Transmission daemon. Streaming, RSS, labels, speed graphs, scheduler, mTLS, bilingual. Free &amp; open source.">
+<meta property="og:url" content="https://epaxpax.github.io/transmission-remote-gui/">
+<meta property="og:image" content="https://epaxpax.github.io/transmission-remote-gui/screenshot.png">
+<meta property="og:image:width" content="1800">
+<meta property="og:image:height" content="970">
+<meta property="og:image:alt" content="Transmission Remote GUI on macOS">
+<meta property="og:site_name" content="Transmission Remote GUI">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Transmission Remote GUI — native macOS remote">
+<meta name="twitter:description" content="Modern SwiftUI macOS remote for the Transmission daemon. Streaming, RSS, labels, speed graphs. Free &amp; open source.">
+<meta name="twitter:image" content="https://epaxpax.github.io/transmission-remote-gui/screenshot.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://epaxpax.github.io/transmission-remote-gui/#app",
+      "name": "Transmission Remote GUI",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "macOS 14+",
+      "softwareVersion": "0.1.4",
+      "datePublished": "2026-07-08",
+      "dateModified": "2026-07-09",
+      "url": "https://epaxpax.github.io/transmission-remote-gui/",
+      "downloadUrl": "https://github.com/epaxpax/transmission-remote-gui/releases/latest",
+      "installUrl": "https://github.com/epaxpax/transmission-remote-gui/releases/latest",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "inLanguage": ["en", "hu"],
+      "screenshot": "https://epaxpax.github.io/transmission-remote-gui/screenshot.png",
+      "featureList": [
+        "Sequential streaming download (Transmission 4.1+)",
+        "RSS auto-download with title-match rules and dedup",
+        "Labels and sidebar filters",
+        "Live speed graphs and menu-bar statistics popover",
+        "Bandwidth scheduler with turtle mode",
+        "Per-server mTLS client-certificate authentication",
+        "Native NSTableView list scaling to tens of thousands of torrents",
+        "Bilingual English/Hungarian UI, multiple servers, Keychain passwords"
+      ],
+      "description": "Native SwiftUI macOS remote GUI for the Transmission BitTorrent daemon; a modern transgui alternative with sequential streaming, RSS auto-download, labels, live speed graphs, scheduler, mTLS and a bilingual UI.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@id": "https://github.com/epaxpax" },
+      "publisher": { "@id": "https://github.com/epaxpax" },
+      "sameAs": "https://github.com/epaxpax/transmission-remote-gui"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://github.com/epaxpax",
+      "name": "epaxpax",
+      "url": "https://github.com/epaxpax"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://epaxpax.github.io/transmission-remote-gui/#website",
+      "url": "https://epaxpax.github.io/transmission-remote-gui/",
+      "name": "Transmission Remote GUI",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://github.com/epaxpax" },
+      "about": { "@id": "https://epaxpax.github.io/transmission-remote-gui/#app" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://epaxpax.github.io/transmission-remote-gui/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Transmission Remote GUI free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is completely free and open source under the MIT license. There is no paid tier, subscription, in-app purchase, or ads." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a server to use it?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is a remote control for an existing Transmission daemon (transmission-daemon) with RPC enabled — running on a NAS, seedbox, Raspberry Pi, or any always-on machine. It does not download torrents on its own; that is by design." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it a good transgui alternative for macOS?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It is a native SwiftUI rewrite for Mac. It speaks the same Transmission RPC API as transgui but adds macOS-native features — a menu-bar popover, Keychain passwords, and sequential streaming — that the classic transgui lacks." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it safe? Is the app signed?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It is open source under the MIT license, so every line is auditable. The Homebrew cask installs it without a Gatekeeper prompt. The .dmg is ad-hoc signed (not notarized), so on first launch right-click the app and choose Open." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it collect any data?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No personal data. The app talks only to your own Transmission server. This website uses GoatCounter, a privacy-friendly analytics tool with no cookies." }
+        },
+        {
+          "@type": "Question",
+          "name": "What macOS version do I need?",
+          "acceptedAnswer": { "@type": "Answer", "text": "macOS 14 (Sonoma) or later, on both Apple Silicon and Intel Macs. Sequential streaming download additionally requires a Transmission 4.1+ daemon." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+  :root { --bg:#0b0d10; --card:#14181d; --fg:#e8ecf1; --muted:#9aa4b0; --accent:#3ea6ff; --line:#232a31; }
+  @media (prefers-color-scheme: light){ :root{ --bg:#f6f8fa; --card:#fff; --fg:#1b1f24; --muted:#5b6570; --accent:#0969da; --line:#e2e6ea; } }
+  *{ box-sizing:border-box; } html,body{ margin:0; }
+  body{ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  .wrap{ max-width:960px; margin:0 auto; padding:0 20px; }
+  header{ text-align:center; padding:72px 20px 32px; }
+  h1{ font-size:clamp(2rem,5vw,3rem); margin:0 0 12px; letter-spacing:-.02em; }
+  .tag{ color:var(--muted); font-size:1.15rem; max-width:660px; margin:0 auto 16px; }
+  .trust{ color:var(--muted); font-size:.92rem; margin:0 0 24px; }
+  .trust strong{ color:var(--fg); }
+  .cta{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .btn{ display:inline-block; padding:12px 22px; border-radius:10px; text-decoration:none; font-weight:600; }
+  .btn.primary{ background:var(--accent); color:#fff; }
+  .btn.ghost{ border:1px solid var(--line); color:var(--fg); }
+  code{ background:var(--card); border:1px solid var(--line); padding:2px 7px; border-radius:6px; font-size:.9em; }
+  .shot{ margin:28px auto 8px; max-width:100%; height:auto; border:1px solid var(--line); border-radius:12px; display:block; }
+  h2{ font-size:1.5rem; margin:52px 0 16px; }
+  h3{ font-size:1.1rem; margin:24px 0 6px; }
+  .lead{ font-size:1.05rem; }
+  .req{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 18px; margin-top:16px; color:var(--muted); }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+  .feat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+  .feat h3{ margin:0 0 6px; font-size:1.05rem; }
+  .feat p{ margin:0; color:var(--muted); font-size:.94rem; }
+  .tablewrap{ overflow-x:auto; }
+  table{ border-collapse:collapse; width:100%; margin-top:8px; font-size:.95rem; }
+  th,td{ border:1px solid var(--line); padding:9px 12px; text-align:left; }
+  th{ background:var(--card); }
+  td.yes{ color:#3fb950; font-weight:600; } td.no{ color:var(--muted); }
+  .install{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 24px; margin-top:12px; }
+  .install pre{ overflow-x:auto; margin:8px 0 0; }
+  .faq h3{ margin-top:22px; }
+  .faq p{ margin:4px 0 0; color:var(--muted); }
+  footer{ text-align:center; color:var(--muted); padding:48px 20px 64px; border-top:1px solid var(--line); margin-top:64px; font-size:.9rem; }
+  a{ color:var(--accent); }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>Transmission Remote GUI</h1>
+  <p class="tag">A modern, native <strong>SwiftUI macOS</strong> remote for the <strong>Transmission</strong> BitTorrent daemon — the <strong>transgui</strong> alternative, rebuilt for Mac.</p>
+  <p class="trust"><strong>macOS 14+</strong> · <strong>Free</strong> · <strong>MIT</strong> open source · v0.1.4</p>
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/epaxpax/transmission-remote-gui/releases/latest">Download for macOS</a>
+    <a class="btn ghost" href="https://github.com/epaxpax/transmission-remote-gui">View on GitHub</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>What is Transmission Remote GUI?</h2>
+    <p class="lead"><strong>Transmission Remote GUI is a free, open-source (MIT) native macOS app that remotely controls a Transmission BitTorrent daemon running on your NAS, seedbox, Raspberry Pi, or home server.</strong> It talks to Transmission over its RPC API — so your Mac stays a clean remote control, while the actual downloading and seeding happen on your always-on box. It is a modern <strong>macOS torrent client</strong> front-end and a drop-in <strong>transgui alternative</strong>, rebuilt in SwiftUI, adding sequential streaming, RSS auto-download, labels, live speed graphs, a scheduler, and optional mTLS.</p>
+    <p class="req"><strong>Requires:</strong> a running Transmission daemon (<code>transmission-daemon</code>) with RPC enabled, and macOS 14 (Sonoma) or later — Apple Silicon or Intel. It does not run the BitTorrent engine itself; that lives on your server.</p>
+  </section>
+
+  <img class="shot" src="screenshot.png" width="1800" height="970" fetchpriority="high" decoding="async" alt="Transmission Remote GUI on macOS — torrent list with sidebar filters and labels, a details inspector with per-torrent speed limit, and a live speed graph">
+
+  <h2>Features</h2>
+  <div class="grid">
+    <div class="feat"><h3>▶ Sequential streaming download</h3><p>Transmission 4.1+ — pieces download in order, so you can watch media while it still downloads. No official GUI exposes this.</p></div>
+    <div class="feat"><h3>📡 RSS auto-download</h3><p>Watched feeds + title-match rules (text or /regex/) → automatic torrent add, with dedup.</p></div>
+    <div class="feat"><h3>🏷 Labels &amp; filters</h3><p>Tag torrents into categories and filter the list by label from the sidebar.</p></div>
+    <div class="feat"><h3>📈 Live speed graphs</h3><p>A sidebar mini-chart, a full Statistics panel, and a Stats-app-style menu-bar popover.</p></div>
+    <div class="feat"><h3>⏱ Bandwidth scheduler</h3><p>Turbo limits on/off by time of day and day of week, plus one-click turtle mode.</p></div>
+    <div class="feat"><h3>🔒 mTLS client certificate</h3><p>Optional client-certificate authentication per server, for a reverse proxy that requires it.</p></div>
+    <div class="feat"><h3>🚀 Fast &amp; native</h3><p>NSTableView-backed list handles tens of thousands of torrents; menu-bar icon, hideable Dock icon.</p></div>
+    <div class="feat"><h3>🌐 Bilingual</h3><p>English and Hungarian, switchable at runtime. Multiple servers, Keychain passwords, auto-connect.</p></div>
+  </div>
+
+  <h2>Why Transmission Remote GUI vs. transgui or the web UI</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>&nbsp;</th><th>This app</th><th>transgui</th><th>Transmission Web UI</th></tr></thead>
+    <tbody>
+      <tr><td>Native macOS (SwiftUI, Retina, dark mode)</td><td class="yes">Yes</td><td class="no">No (Lazarus/GTK)</td><td class="no">Browser only</td></tr>
+      <tr><td>Sequential streaming download</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+      <tr><td>RSS auto-download (regex rules)</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+      <tr><td>Menu-bar popover + Keychain passwords</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+      <tr><td>Live speed graphs</td><td class="yes">Yes</td><td class="no">Partial</td><td class="no">No</td></tr>
+      <tr><td>mTLS / client-cert auth</td><td class="yes">Yes</td><td class="no">No</td><td class="no">Depends on proxy</td></tr>
+      <tr><td>License</td><td class="yes">MIT (free)</td><td class="yes">GPL (free)</td><td class="yes">Free</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Install</h2>
+  <div class="install">
+    <strong>Homebrew</strong>
+    <pre><code>brew install --cask epaxpax/tap/transmission-remote-gui-macos</code></pre>
+    <p style="color:var(--muted);margin:14px 0 0">Or download the <a href="https://github.com/epaxpax/transmission-remote-gui/releases/latest">latest <code>.dmg</code></a>. Ad-hoc signed (not notarized): the cask installs without a Gatekeeper prompt; for the <code>.dmg</code>, first launch = right-click → Open.</p>
+  </div>
+
+  <h3>Set up in 3 steps</h3>
+  <p style="color:var(--muted)">1. On your server, enable RPC in Transmission (<code>rpc-enabled</code>, set a username/password). &nbsp; 2. Install this app on your Mac. &nbsp; 3. In the app: Settings → Servers → + → enter the host, port (9091), and credentials → Connect.</p>
+
+  <h2>FAQ</h2>
+  <div class="faq">
+    <h3>Is Transmission Remote GUI free?</h3>
+    <p>Yes — completely free and open source under the MIT license. No paid tier, subscription, in-app purchase, or ads.</p>
+    <h3>Do I need a server to use it?</h3>
+    <p>Yes. It is a remote for an existing Transmission daemon (on a NAS, seedbox, Raspberry Pi, or any machine running <code>transmission-daemon</code> with RPC enabled). It does not download torrents on its own — that is by design.</p>
+    <h3>Is it a good transgui alternative for macOS?</h3>
+    <p>It is a native SwiftUI rewrite for Mac. It speaks the same Transmission RPC API as transgui but adds macOS-native features — a menu-bar popover, Keychain passwords, and sequential streaming — that the classic transgui lacks.</p>
+    <h3>Is it safe? Is the app signed?</h3>
+    <p>It is open source (MIT), so every line is auditable. The Homebrew cask installs it without a Gatekeeper prompt; the <code>.dmg</code> is ad-hoc signed (not notarized), so on first launch right-click the app and choose Open.</p>
+    <h3>Does it collect any data?</h3>
+    <p>No personal data. The app talks only to your own Transmission server. This website uses GoatCounter — privacy-friendly analytics, no cookies.</p>
+    <h3>What macOS version do I need?</h3>
+    <p>macOS 14 (Sonoma) or later, on both Apple Silicon and Intel Macs. Sequential streaming additionally needs a Transmission 4.1+ daemon.</p>
+  </div>
+</main>
+
+<footer>
+  <a href="https://github.com/epaxpax/transmission-remote-gui">github.com/epaxpax/transmission-remote-gui</a> · MIT License ·
+  a clean-room reimagining of the classic <a href="https://github.com/transmission-remote-gui/transgui">transgui</a>
+</footer>
+
+<!-- GoatCounter: privacy-friendly analytics (no cookies, no personal data). Dashboard: https://trgui.goatcounter.com -->
+<script data-goatcounter="https://trgui.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
