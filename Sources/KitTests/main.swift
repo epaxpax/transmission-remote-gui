@@ -294,14 +294,28 @@ await t.test("torrentSetLocation can register a new location without moving the 
     try t.expectEqual(args["move"] as? Bool, false)
 }
 
-await t.test("torrentSetLocation omits the ids key for .all") {
+await t.test("torrentSetLocation refuses .all and an empty id list without sending anything") {
+    // An omitted ids key means "every torrent" to the daemon — relocating a whole
+    // library must never be reachable by accident.
+    for ids in [RPCIds.all, .recentlyActive, .ids([])] {
+        MockURLProtocol.reset()
+        MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+        var threw = false
+        do { try await makeClient().torrentSetLocation(ids: ids, location: "/tank", move: true) }
+        catch is RPCError { threw = true }
+        try t.expect(threw, "\(ids) must be rejected")
+        try t.expectEqual(MockURLProtocol.requestCount, 0)
+    }
+}
+
+await t.test("torrentSetLocation encodes hash identifiers as strings") {
     MockURLProtocol.reset()
     MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{},"tag":0}"#.data(using: .utf8)!) }
-    try await makeClient().torrentSetLocation(ids: .all, location: "/tank", move: true)
+    try await makeClient().torrentSetLocation(ids: .ids([.hash("abc123")]), location: "/tank", move: true)
     let body = try t.unwrap(MockURLProtocol.lastBodies.last)
     let json = try t.unwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
     let args = try t.unwrap(json["arguments"] as? [String: Any])
-    try t.expect(args["ids"] == nil, "for .all the ids key must be omitted")
+    try t.expectEqual(args["ids"] as? [String], ["abc123"])
 }
 
 await t.test("torrentSetLocation throws on a non-success result") {
@@ -326,6 +340,7 @@ await t.test("torrentRenamePath sends a single id with the old path and the new 
     try t.expectEqual(args["ids"] as? [Int], [3])
     try t.expectEqual(args["path"] as? String, "Old")
     try t.expectEqual(args["name"] as? String, "New")
+    try t.expect(args["id"] == nil, "the classic daemon wants an ids array, not a singular id")
 }
 
 await t.test("torrentRenamePath throws on a non-success result") {
@@ -390,7 +405,7 @@ await t.test("Copying needs the underlying field, the remaining commands only ne
     try t.expect(TorrentRowMenu.isEnabled(.copyHash, for: [withHash]), "hash present -> enabled")
     try t.expect(!TorrentRowMenu.isEnabled(.copyHash, for: [noHash]), "no hash -> disabled")
     try t.expect(!TorrentRowMenu.isEnabled(.copyName, for: [bare]), "no name -> disabled")
-    for command in [TorrentRowCommand.move, .verify, .reannounce, .removeKeepData, .removeWithData] {
+    for command in [TorrentRowCommand.move, .removeKeepData, .removeWithData] {
         try t.expect(TorrentRowMenu.isEnabled(command, for: [bare]), "\(command) only needs a target")
     }
 }
@@ -404,6 +419,120 @@ await t.test("sanitizedName trims, rejects empty names and path separators") {
 await t.test("sanitizedLocation trims and rejects an empty path") {
     try t.expectEqual(TorrentRowMenu.sanitizedLocation(" /mnt/data "), "/mnt/data")
     try t.expect(TorrentRowMenu.sanitizedLocation("   ") == nil, "an empty location is invalid")
+}
+
+print("\nContext menu layout")
+
+await t.test("Every command appears in the menu layout exactly once") {
+    let listed = TorrentRowMenu.layout.map(\.command)
+    try t.expectEqual(Set(listed), Set(TorrentRowCommand.allCases))
+    try t.expectEqual(listed.count, TorrentRowCommand.allCases.count)
+}
+
+await t.test("The layout does not end with a separator") {
+    let last = try t.unwrap(TorrentRowMenu.layout.last)
+    try t.expect(!last.separatorAfter, "a trailing separator draws an empty strip at the menu's bottom")
+}
+
+await t.test("Every layout entry has a title key") {
+    for entry in TorrentRowMenu.layout {
+        try t.expect(!entry.titleKey.isEmpty, "\(entry.command) has no title")
+    }
+}
+
+print("\nRow to torrent mapping")
+
+await t.test("targets maps row indices to torrents in row order") {
+    let torrents = [Torrent(id: 10), Torrent(id: 11), Torrent(id: 12)]
+    let picked = TorrentRowMenu.targets(rows: IndexSet([0, 2]), in: torrents)
+    try t.expectEqual(picked.map(\.id), [10, 12])
+}
+
+await t.test("targets drops rows the current snapshot no longer has") {
+    // The list is refreshed by polling, so a captured row index can outlive its data.
+    let torrents = [Torrent(id: 10), Torrent(id: 11)]
+    let picked = TorrentRowMenu.targets(rows: IndexSet([1, 40]), in: torrents)
+    try t.expectEqual(picked.map(\.id), [11])
+}
+
+await t.test("targets returns nothing when every row is gone") {
+    try t.expect(TorrentRowMenu.targets(rows: IndexSet([5, 6]), in: [Torrent(id: 1)]).isEmpty,
+                 "a fully stale selection must produce no command targets")
+}
+
+print("\nCommand enablement — states")
+
+await t.test("Queued torrents count as running for Start/Stop") {
+    var queuedDown = Torrent(id: 1); queuedDown.status = Torrent.Status.queuedToDownload.rawValue
+    var queuedSeed = Torrent(id: 2); queuedSeed.status = Torrent.Status.queuedToSeed.rawValue
+    for torrent in [queuedDown, queuedSeed] {
+        try t.expect(TorrentRowMenu.isEnabled(.stop, for: [torrent]), "queued -> stoppable")
+        try t.expect(!TorrentRowMenu.isEnabled(.start, for: [torrent]), "queued -> already started")
+    }
+}
+
+await t.test("Verify is disabled while the torrent is already being checked") {
+    var verifying = Torrent(id: 1); verifying.status = Torrent.Status.verifying.rawValue
+    var queued = Torrent(id: 2); queued.status = Torrent.Status.queuedToVerify.rawValue
+    var stopped = Torrent(id: 3); stopped.status = Torrent.Status.stopped.rawValue
+    try t.expect(!TorrentRowMenu.isEnabled(.verify, for: [verifying]), "already verifying")
+    try t.expect(!TorrentRowMenu.isEnabled(.verify, for: [queued]), "already queued to verify")
+    try t.expect(TorrentRowMenu.isEnabled(.verify, for: [stopped]), "stopped -> verifiable")
+    try t.expect(TorrentRowMenu.isEnabled(.verify, for: [verifying, stopped]), "mixed -> offer it")
+}
+
+await t.test("Reannounce needs at least one running torrent") {
+    var stopped = Torrent(id: 1); stopped.status = Torrent.Status.stopped.rawValue
+    var seeding = Torrent(id: 2); seeding.status = Torrent.Status.seeding.rawValue
+    try t.expect(!TorrentRowMenu.isEnabled(.reannounce, for: [stopped]), "stopped -> no announce to refresh")
+    try t.expect(TorrentRowMenu.isEnabled(.reannounce, for: [seeding]), "seeding -> reannounce")
+    try t.expect(TorrentRowMenu.isEnabled(.reannounce, for: [stopped, seeding]), "mixed -> offer it")
+}
+
+await t.test("An empty name blocks Rename and Copy name just like a missing one") {
+    var blank = Torrent(id: 1); blank.name = ""
+    try t.expect(!TorrentRowMenu.isEnabled(.rename, for: [blank]), "empty name -> nothing to rename")
+    try t.expect(!TorrentRowMenu.isEnabled(.copyName, for: [blank]), "empty name -> nothing to copy")
+}
+
+await t.test("An empty hash blocks Copy hash") {
+    var blank = Torrent(id: 1); blank.hashString = ""
+    try t.expect(!TorrentRowMenu.isEnabled(.copyHash, for: [blank]), "empty hash -> nothing to copy")
+}
+
+print("\nInput validation")
+
+await t.test("sanitizedName rejects path separators and traversal shapes") {
+    for bad in ["", "   ", "a/b", "a/b/c", "/abs", "a\\b", ".", "..", " .. "] {
+        try t.expect(TorrentRowMenu.sanitizedName(bad) == nil, "\(bad.debugDescription) must be rejected")
+    }
+}
+
+await t.test("sanitizedName rejects the unchanged name") {
+    try t.expect(TorrentRowMenu.sanitizedName("Ubuntu", current: "Ubuntu") == nil,
+                 "renaming to the same value is a wasted round trip")
+    try t.expect(TorrentRowMenu.sanitizedName("  Ubuntu  ", current: "Ubuntu") == nil,
+                 "whitespace alone is not a change")
+    try t.expectEqual(TorrentRowMenu.sanitizedName("Ubuntu 2", current: "Ubuntu"), "Ubuntu 2")
+}
+
+await t.test("sanitizedName keeps accented and non-ASCII names") {
+    try t.expectEqual(TorrentRowMenu.sanitizedName("Árvíztűrő tükörfúrógép"), "Árvíztűrő tükörfúrógép")
+    try t.expectEqual(TorrentRowMenu.sanitizedName(" 日本語 🎬 "), "日本語 🎬")
+}
+
+await t.test("sanitizedLocation rejects relative and tilde paths") {
+    for bad in ["", "   ", "backups", "./backups", "../up", "~/Downloads", "~"] {
+        try t.expect(TorrentRowMenu.sanitizedLocation(bad) == nil, "\(bad.debugDescription) must be rejected")
+    }
+}
+
+await t.test("sanitizedLocation accepts POSIX and Windows absolute paths") {
+    try t.expectEqual(TorrentRowMenu.sanitizedLocation(" /mnt/data "), "/mnt/data")
+    try t.expectEqual(TorrentRowMenu.sanitizedLocation("/mnt/data/"), "/mnt/data/")
+    // The client is macOS-only, the daemon is not.
+    try t.expectEqual(TorrentRowMenu.sanitizedLocation("C:\\Downloads"), "C:\\Downloads")
+    try t.expectEqual(TorrentRowMenu.sanitizedLocation("D:/media"), "D:/media")
 }
 
 exit(Int32(t.summary()))

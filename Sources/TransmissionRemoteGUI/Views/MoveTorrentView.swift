@@ -13,14 +13,19 @@ struct MoveTorrentView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var location: String
     @State private var moveData = true
+    @FocusState private var locationFocused: Bool
 
     init(torrents: [Torrent], onSubmit: @escaping (_ location: String, _ move: Bool) -> Void) {
         self.torrents = torrents
         self.onSubmit = onSubmit
-        // Prefill only when every target currently sits in the same directory.
+        // Prefill only when EVERY target reports a directory and they all agree; a single
+        // known directory among several torrents must not stand in for the others.
         let dirs = Set(torrents.compactMap(\.downloadDir))
-        _location = State(initialValue: dirs.count == 1 ? (dirs.first ?? "") : "")
+        let allKnown = torrents.allSatisfy { $0.downloadDir != nil }
+        _location = State(initialValue: allKnown && dirs.count == 1 ? (dirs.first ?? "") : "")
     }
+
+    private var sanitized: String? { TorrentRowMenu.sanitizedLocation(location) }
 
     private var subtitle: String {
         torrents.count == 1
@@ -37,9 +42,10 @@ struct MoveTorrentView: View {
                 .lineLimit(2)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(loc("Célmappa a szerveren")).font(.callout).foregroundStyle(.secondary)
+                Text(loc("Célmappa a szerveren (abszolút útvonal)")).font(.callout).foregroundStyle(.secondary)
                 TextField("/mnt/data/…", text: $location)
                     .textFieldStyle(.roundedBorder)
+                    .focused($locationFocused)
             }
 
             Toggle(loc("Fájlok átmozgatása"), isOn: $moveData)
@@ -57,15 +63,16 @@ struct MoveTorrentView: View {
                 Button(loc("Mégse")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button(loc("Áthelyezés")) {
-                    guard let value = TorrentRowMenu.sanitizedLocation(location) else { return }
-                    onSubmit(value, moveData)
+                    guard let sanitized else { return }
+                    onSubmit(sanitized, moveData)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(TorrentRowMenu.sanitizedLocation(location) == nil)
+                .disabled(sanitized == nil)
             }
         }
         .padding(20)
-        .frame(width: 480, height: 260)
+        .frame(width: 480, height: 280)
+        .onAppear { locationFocused = true }
     }
 }

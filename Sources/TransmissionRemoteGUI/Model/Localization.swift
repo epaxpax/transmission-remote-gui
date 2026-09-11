@@ -160,6 +160,9 @@ let englishStrings: [String: String] = [
     "Felhasználónév (opcionális)": "Username (optional)",
     "Jelszó (opcionális)": "Password (optional)",
     "mp": "s",
+    // Action failure alert
+    "A művelet nem sikerült": "The action failed",
+    "OK": "OK",
     // Torrent list context menu
     "Áthelyezés…": "Move…",
     "Átnevezés…": "Rename…",
@@ -168,7 +171,7 @@ let englishStrings: [String: String] = [
     // Move dialog
     "Torrent áthelyezése": "Move torrent",
     "kijelölt torrent": "selected torrents",
-    "Célmappa a szerveren": "Target folder on the server",
+    "Célmappa a szerveren (abszolút útvonal)": "Target folder on the server (absolute path)",
     "Fájlok átmozgatása": "Move the files",
     "A daemon átmozgatja a fájlokat az új helyre.": "The daemon moves the files to the new location.",
     "Csak a nyilvántartott hely változik — a fájloknak már ott kell lenniük.": "Only the recorded location changes — the files must already be there.",

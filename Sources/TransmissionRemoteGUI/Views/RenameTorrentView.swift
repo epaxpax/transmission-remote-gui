@@ -9,6 +9,7 @@ struct RenameTorrentView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
+    @FocusState private var nameFocused: Bool
 
     init(torrent: Torrent, onSubmit: @escaping (_ newName: String) -> Void) {
         self.torrent = torrent
@@ -16,7 +17,9 @@ struct RenameTorrentView: View {
         _name = State(initialValue: torrent.name ?? "")
     }
 
-    private var sanitized: String? { TorrentRowMenu.sanitizedName(name) }
+    /// `current:` also rejects the unchanged name, so the button stays disabled until
+    /// the user actually changes something.
+    private var sanitized: String? { TorrentRowMenu.sanitizedName(name, current: torrent.name) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -24,9 +27,11 @@ struct RenameTorrentView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(loc("Új név")).font(.callout).foregroundStyle(.secondary)
+                // Return is already bound to the default action below; a second
+                // `.onSubmit` here would fire the rename twice.
                 TextField("", text: $name)
                     .textFieldStyle(.roundedBorder)
-                    .onSubmit(submit)
+                    .focused($nameFocused)
             }
 
             Text(loc("A daemon a letöltési mappában is átnevezi a fájlt/mappát. A név nem tartalmazhat „/” karaktert."))
@@ -47,6 +52,7 @@ struct RenameTorrentView: View {
         }
         .padding(20)
         .frame(width: 480, height: 220)
+        .onAppear { nameFocused = true }
     }
 
     private func submit() {
