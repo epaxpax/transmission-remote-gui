@@ -359,6 +359,18 @@ final class AppModel {
         await perform { try await $0.torrentReannounce(ids: ids ?? self.selectionIDs) }
     }
 
+    /// Move the given (or selected) torrents' data to `location`.
+    /// With `move: false` only the recorded location changes — use it when the files
+    /// were already moved by other means.
+    func setLocation(_ location: String, move: Bool, ids: RPCIds? = nil) async {
+        await perform { try await $0.torrentSetLocation(ids: ids ?? self.selectionIDs, location: location, move: move) }
+    }
+
+    /// Rename a single torrent's top-level path, i.e. the name shown in the list.
+    func rename(id: Int, from oldName: String, to newName: String) async {
+        await perform { try await $0.torrentRenamePath(id: id, path: oldName, name: newName) }
+    }
+
     /// Enable/disable sequential ("streaming") download on the selection (Transmission 4.1+).
     func setSequential(on: Bool, ids: RPCIds? = nil) async {
         await perform {
