@@ -12,6 +12,10 @@ struct TorrentTableView: NSViewRepresentable {
     @Binding var sortOrder: [KeyPathComparator<Torrent>]
     var scale: Double = 1.0
     var effective: AppLanguage = .hungarian   // for tracking language changes (column header refresh)
+    /// Invoked when a context-menu command is chosen. The targeted torrents are captured
+    /// when the menu opens, so the command never depends on the selection binding having
+    /// propagated back to SwiftUI in the meantime.
+    var onCommand: (TorrentRowCommand, [Torrent]) -> Void = { _, _ in }
 
     private static let baseRowHeight: CGFloat = 22
     private static let baseFontSize: CGFloat = 12
@@ -89,7 +93,7 @@ struct TorrentTableView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let table = NSTableView()
+        let table = RowMenuTableView()
         table.style = .inset
         table.usesAlternatingRowBackgroundColors = true
         table.allowsMultipleSelection = true
@@ -112,6 +116,10 @@ struct TorrentTableView: NSViewRepresentable {
         table.dataSource = context.coordinator
         table.target = context.coordinator
         table.doubleAction = #selector(Coordinator.doubleClicked)
+        // Right-click / Ctrl-click: the table asks the coordinator for a menu for the clicked row.
+        table.menuProvider = { [weak coordinator = context.coordinator] row in
+            coordinator?.menu(forClickedRow: row)
+        }
 
         // Initial sort indicator on the header (the model's default: added date descending).
         table.sortDescriptors = [NSSortDescriptor(key: "added", ascending: false)]
@@ -143,7 +151,74 @@ struct TorrentTableView: NSViewRepresentable {
         private var lastScale: Double = 1.0
         private var lastLanguage: AppLanguage?
 
+        /// Torrents the currently open context menu acts on (captured when it opens).
+        private var menuTargets: [Torrent] = []
+        private lazy var rowMenu: NSMenu = Self.makeRowMenu(target: self)
+
         init(_ parent: TorrentTableView) { self.parent = parent }
+
+        // MARK: Context menu
+
+        /// The menu for a right-clicked row, or `nil` on empty space (where macOS shows none).
+        func menu(forClickedRow row: Int) -> NSMenu? {
+            guard let tv = tableView else { return nil }
+            let rows = TorrentRowMenu.targetRows(clicked: row, selection: tv.selectedRowIndexes)
+            guard !rows.isEmpty else { return nil }
+
+            // Clicking outside the selection retargets it, exactly like Finder.
+            if rows != tv.selectedRowIndexes {
+                tv.selectRowIndexes(rows, byExtendingSelection: false)   // also syncs the SwiftUI binding
+            }
+
+            menuTargets = rows.compactMap { $0 < data.count ? data[$0] : nil }
+            guard !menuTargets.isEmpty else { return nil }
+
+            // Titles are refreshed on every open so a language switch is picked up for free.
+            for item in rowMenu.items {
+                guard let command = item.representedObject as? TorrentRowCommand,
+                      let spec = Self.menuItems.first(where: { $0.command == command }) else { continue }
+                item.title = loc(spec.title)
+                item.isEnabled = TorrentRowMenu.isEnabled(command, for: menuTargets)
+            }
+            return rowMenu
+        }
+
+        @objc func menuCommandSelected(_ sender: NSMenuItem) {
+            guard let command = sender.representedObject as? TorrentRowCommand else { return }
+            parent.onCommand(command, menuTargets)
+        }
+
+        /// Menu layout: `nil` marks a separator.
+        private static let menuItems: [(command: TorrentRowCommand, title: String)] = [
+            (.start, "Indítás"),
+            (.stop, "Leállítás"),
+            (.move, "Áthelyezés…"),
+            (.rename, "Átnevezés…"),
+            (.verify, "Ellenőrzés (verify)"),
+            (.reannounce, "Újrabejelentés a trackernek"),
+            (.copyName, "Név másolása"),
+            (.copyHash, "Hash másolása"),
+            (.removeKeepData, "Törlés a listából"),
+            (.removeWithData, "Törlés az adatokkal együtt"),
+        ]
+
+        /// Commands after which a separator is drawn.
+        private static let separatorsAfter: Set<TorrentRowCommand> = [.stop, .rename, .reannounce, .copyHash]
+
+        private static func makeRowMenu(target: Coordinator) -> NSMenu {
+            let menu = NSMenu()
+            menu.autoenablesItems = false   // enablement comes from TorrentRowMenu.isEnabled
+            for spec in menuItems {
+                let item = NSMenuItem(title: loc(spec.title),
+                                      action: #selector(Coordinator.menuCommandSelected(_:)),
+                                      keyEquivalent: "")
+                item.target = target
+                item.representedObject = spec.command
+                menu.addItem(item)
+                if separatorsAfter.contains(spec.command) { menu.addItem(.separator()) }
+            }
+            return menu
+        }
 
         func update(torrents: [Torrent], selection: Set<Int>, scale: Double) {
             var reload = false
@@ -244,6 +319,18 @@ struct TorrentTableView: NSViewRepresentable {
         @objc func doubleClicked() {
             // Double-click updates the detail view via the selection; there is no separate action.
         }
+    }
+}
+
+/// `NSTableView` that routes right-click / Ctrl-click to a provider which knows the row
+/// under the cursor. Without this the table has no `menu` at all and the click does nothing.
+final class RowMenuTableView: NSTableView {
+    /// Returns the menu for the clicked row index (`-1` when the click missed every row).
+    var menuProvider: ((Int) -> NSMenu?)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        return menuProvider?(row(at: point))
     }
 }
 

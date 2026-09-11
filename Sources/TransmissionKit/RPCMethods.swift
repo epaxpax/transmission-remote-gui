@@ -65,6 +65,27 @@ private struct RemoveArgs: Encodable {
     }
 }
 
+private struct SetLocationArgs: Encodable {
+    let ids: RPCIds?
+    let location: String
+    /// `true` moves the files on disk; `false` only tells the daemon where they already are.
+    let move: Bool
+    private enum CodingKeys: String, CodingKey { case ids, location, move }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let ids { try container.encode(ids, forKey: .ids) }
+        try container.encode(location, forKey: .location)
+        try container.encode(move, forKey: .move)
+    }
+}
+
+private struct RenamePathArgs: Encodable {
+    let ids: RPCIds
+    /// The path being renamed, relative to the torrent (the torrent name itself for a top-level rename).
+    let path: String
+    let name: String
+}
+
 private struct TorrentAddArgs: Encodable {
     var filename: String?
     var metainfo: String?
@@ -292,6 +313,20 @@ public extension RPCClient {
     /// Arbitrary `torrent-set` operation (file selection, priority, limits).
     func torrentSet(_ args: TorrentSetArgs) async throws {
         let _: EmptyArgs = try await send(method: "torrent-set", arguments: args)
+    }
+
+    /// Moves a torrent's data to `location` (`move: true`), or just records that the data
+    /// already lives there (`move: false`).
+    func torrentSetLocation(ids: RPCIds, location: String, move: Bool) async throws {
+        let args = SetLocationArgs(ids: ids.normalizedForRequest, location: location, move: move)
+        let _: EmptyArgs = try await send(method: "torrent-set-location", arguments: args)
+    }
+
+    /// Renames a path inside a single torrent. Passing the torrent's own name as `path`
+    /// renames the torrent itself. The RPC spec allows exactly one torrent per call.
+    func torrentRenamePath(id: Int, path: String, name: String) async throws {
+        let args = RenamePathArgs(ids: .ids([.id(id)]), path: path, name: name)
+        let _: EmptyArgs = try await send(method: "torrent-rename-path", arguments: args)
     }
 
     func sessionGet() async throws -> SessionInfo {

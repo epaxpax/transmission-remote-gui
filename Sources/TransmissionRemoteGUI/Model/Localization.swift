@@ -160,6 +160,24 @@ let englishStrings: [String: String] = [
     "Felhasználónév (opcionális)": "Username (optional)",
     "Jelszó (opcionális)": "Password (optional)",
     "mp": "s",
+    // Torrent list context menu
+    "Áthelyezés…": "Move…",
+    "Átnevezés…": "Rename…",
+    "Név másolása": "Copy name",
+    "Hash másolása": "Copy hash",
+    // Move dialog
+    "Torrent áthelyezése": "Move torrent",
+    "kijelölt torrent": "selected torrents",
+    "Célmappa a szerveren": "Target folder on the server",
+    "Fájlok átmozgatása": "Move the files",
+    "A daemon átmozgatja a fájlokat az új helyre.": "The daemon moves the files to the new location.",
+    "Csak a nyilvántartott hely változik — a fájloknak már ott kell lenniük.": "Only the recorded location changes — the files must already be there.",
+    "Áthelyezés": "Move",
+    // Rename dialog
+    "Torrent átnevezése": "Rename torrent",
+    "Új név": "New name",
+    "A daemon a letöltési mappában is átnevezi a fájlt/mappát. A név nem tartalmazhat „/” karaktert.": "The daemon also renames the file/folder in the download directory. The name cannot contain a “/” character.",
+    "Átnevezés": "Rename",
     // Delete confirmation + tray
     "Biztosan törlöd a kijelölt torrent(eket)?": "Delete the selected torrent(s)?",
     "Törlés a listából": "Remove from list",
