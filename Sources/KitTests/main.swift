@@ -269,4 +269,141 @@ await t.test("RSSParser handles Atom entries (link href + id)") {
     try t.expectEqual(items[0].guid, "a1")
 }
 
+print("\ntorrent-set-location")
+
+await t.test("torrentSetLocation sends the new location and asks the daemon to move the data") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+    try await makeClient().torrentSetLocation(ids: .ids([.id(7), .id(9)]), location: "/mnt/data/movies", move: true)
+    let body = try t.unwrap(MockURLProtocol.lastBodies.last)
+    let json = try t.unwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+    try t.expectEqual(json["method"] as? String, "torrent-set-location")
+    let args = try t.unwrap(json["arguments"] as? [String: Any])
+    try t.expectEqual(args["ids"] as? [Int], [7, 9])
+    try t.expectEqual(args["location"] as? String, "/mnt/data/movies")
+    try t.expectEqual(args["move"] as? Bool, true)
+}
+
+await t.test("torrentSetLocation can register a new location without moving the files") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+    try await makeClient().torrentSetLocation(ids: .ids([.id(1)]), location: "/tank/done", move: false)
+    let body = try t.unwrap(MockURLProtocol.lastBodies.last)
+    let json = try t.unwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+    let args = try t.unwrap(json["arguments"] as? [String: Any])
+    try t.expectEqual(args["move"] as? Bool, false)
+}
+
+await t.test("torrentSetLocation omits the ids key for .all") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+    try await makeClient().torrentSetLocation(ids: .all, location: "/tank", move: true)
+    let body = try t.unwrap(MockURLProtocol.lastBodies.last)
+    let json = try t.unwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+    let args = try t.unwrap(json["arguments"] as? [String: Any])
+    try t.expect(args["ids"] == nil, "for .all the ids key must be omitted")
+}
+
+await t.test("torrentSetLocation throws on a non-success result") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"no such directory","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+    var threw = false
+    do { try await makeClient().torrentSetLocation(ids: .ids([.id(1)]), location: "/nope", move: true) }
+    catch is RPCError { threw = true }
+    try t.expect(threw, "it should have thrown an RPCError")
+}
+
+print("\ntorrent-rename-path")
+
+await t.test("torrentRenamePath sends a single id with the old path and the new name") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{"id":3,"path":"Old","name":"New"},"tag":0}"#.data(using: .utf8)!) }
+    try await makeClient().torrentRenamePath(id: 3, path: "Old", name: "New")
+    let body = try t.unwrap(MockURLProtocol.lastBodies.last)
+    let json = try t.unwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+    try t.expectEqual(json["method"] as? String, "torrent-rename-path")
+    let args = try t.unwrap(json["arguments"] as? [String: Any])
+    try t.expectEqual(args["ids"] as? [Int], [3])
+    try t.expectEqual(args["path"] as? String, "Old")
+    try t.expectEqual(args["name"] as? String, "New")
+}
+
+await t.test("torrentRenamePath throws on a non-success result") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"invalid argument","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+    var threw = false
+    do { try await makeClient().torrentRenamePath(id: 1, path: "A", name: "B") }
+    catch is RPCError { threw = true }
+    try t.expect(threw, "it should have thrown an RPCError")
+}
+
+print("\nContext menu rules")
+
+await t.test("targetRows keeps the whole selection when the click lands inside it") {
+    let selection = IndexSet([1, 2, 5])
+    try t.expectEqual(TorrentRowMenu.targetRows(clicked: 2, selection: selection), selection)
+}
+
+await t.test("targetRows targets only the clicked row when it is outside the selection") {
+    try t.expectEqual(TorrentRowMenu.targetRows(clicked: 7, selection: IndexSet([1, 2])), IndexSet(integer: 7))
+}
+
+await t.test("targetRows targets the clicked row when nothing is selected") {
+    try t.expectEqual(TorrentRowMenu.targetRows(clicked: 0, selection: IndexSet()), IndexSet(integer: 0))
+}
+
+await t.test("targetRows targets nothing when the click misses every row") {
+    try t.expect(TorrentRowMenu.targetRows(clicked: -1, selection: IndexSet([1])).isEmpty,
+                 "no menu on empty space")
+}
+
+await t.test("Every command is disabled without a target") {
+    for command in TorrentRowCommand.allCases {
+        try t.expect(!TorrentRowMenu.isEnabled(command, for: []), "\(command) must be disabled")
+    }
+}
+
+await t.test("Start is offered for stopped torrents, Stop for running ones") {
+    var stopped = Torrent(id: 1); stopped.status = Torrent.Status.stopped.rawValue
+    var running = Torrent(id: 2); running.status = Torrent.Status.downloading.rawValue
+    try t.expect(TorrentRowMenu.isEnabled(.start, for: [stopped]), "stopped -> start")
+    try t.expect(!TorrentRowMenu.isEnabled(.stop, for: [stopped]), "stopped -> no stop")
+    try t.expect(TorrentRowMenu.isEnabled(.stop, for: [running]), "running -> stop")
+    try t.expect(!TorrentRowMenu.isEnabled(.start, for: [running]), "running -> no start")
+    try t.expect(TorrentRowMenu.isEnabled(.start, for: [stopped, running]), "mixed -> start")
+    try t.expect(TorrentRowMenu.isEnabled(.stop, for: [stopped, running]), "mixed -> stop")
+}
+
+await t.test("Rename is limited to a single named torrent") {
+    var a = Torrent(id: 1); a.name = "A"
+    var b = Torrent(id: 2); b.name = "B"
+    let unnamed = Torrent(id: 3)
+    try t.expect(TorrentRowMenu.isEnabled(.rename, for: [a]), "one torrent -> rename")
+    try t.expect(!TorrentRowMenu.isEnabled(.rename, for: [a, b]), "torrent-rename-path takes a single id")
+    try t.expect(!TorrentRowMenu.isEnabled(.rename, for: [unnamed]), "without a name there is no path to rename")
+}
+
+await t.test("Copying needs the underlying field, the remaining commands only need a target") {
+    var withHash = Torrent(id: 1); withHash.name = "A"; withHash.hashString = "abc"
+    var noHash = Torrent(id: 2); noHash.name = "B"
+    let bare = Torrent(id: 3)
+    try t.expect(TorrentRowMenu.isEnabled(.copyHash, for: [withHash]), "hash present -> enabled")
+    try t.expect(!TorrentRowMenu.isEnabled(.copyHash, for: [noHash]), "no hash -> disabled")
+    try t.expect(!TorrentRowMenu.isEnabled(.copyName, for: [bare]), "no name -> disabled")
+    for command in [TorrentRowCommand.move, .verify, .reannounce, .removeKeepData, .removeWithData] {
+        try t.expect(TorrentRowMenu.isEnabled(command, for: [bare]), "\(command) only needs a target")
+    }
+}
+
+await t.test("sanitizedName trims, rejects empty names and path separators") {
+    try t.expectEqual(TorrentRowMenu.sanitizedName("  Ubuntu 24.04  "), "Ubuntu 24.04")
+    try t.expect(TorrentRowMenu.sanitizedName("   ") == nil, "an empty name is invalid")
+    try t.expect(TorrentRowMenu.sanitizedName("a/b") == nil, "a rename cannot contain a path separator")
+}
+
+await t.test("sanitizedLocation trims and rejects an empty path") {
+    try t.expectEqual(TorrentRowMenu.sanitizedLocation(" /mnt/data "), "/mnt/data")
+    try t.expect(TorrentRowMenu.sanitizedLocation("   ") == nil, "an empty location is invalid")
+}
+
 exit(Int32(t.summary()))
