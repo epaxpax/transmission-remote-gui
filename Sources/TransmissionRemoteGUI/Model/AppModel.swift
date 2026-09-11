@@ -43,6 +43,10 @@ final class AppModel {
     /// Optional label (category) filter, chosen in the sidebar. nil = no label filter.
     var labelFilter: String? { didSet { recomputeDisplayed() } }
     var selection: Set<Int> = []
+
+    /// Last failed action's message, shown as an alert and cleared when dismissed.
+    /// Separate from `connection`, which describes the link to the server.
+    var actionError: String?
     /// Sort order of the list (controlled by the Table header). Default: newest additions first.
     var sortOrder: [KeyPathComparator<Torrent>] = [
         KeyPathComparator(\.addedDateSortKey, order: .reverse)
@@ -435,7 +439,7 @@ final class AppModel {
             try await client.sessionSet(args)
             await loadSessionInfo()
         } catch {
-            connection = .failed((error as? RPCError)?.errorDescription ?? error.localizedDescription)
+            actionError = message(for: error)
         }
     }
 
@@ -452,14 +456,23 @@ final class AppModel {
     }
 
     /// Runs an action, then refreshes immediately.
+    ///
+    /// A failed action is NOT a lost connection: reporting it through `connection` would
+    /// replace the whole list with an error placeholder for the one second until the next
+    /// refresh, hiding the message instead of showing it. Genuine connection loss is
+    /// detected by `refresh()` itself.
     private func perform(_ action: (RPCClient) async throws -> Void) async {
         guard let client else { return }
         do {
             try await action(client)
             await refresh()
         } catch {
-            connection = .failed((error as? RPCError)?.errorDescription ?? error.localizedDescription)
+            actionError = message(for: error)
         }
+    }
+
+    private func message(for error: Error) -> String {
+        (error as? RPCError)?.errorDescription ?? error.localizedDescription
     }
 
     // MARK: - Server management
