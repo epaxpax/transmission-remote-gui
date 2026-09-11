@@ -16,7 +16,8 @@ tiszta lapról írt macOS-újragondolása.
 - Sidebar szűrők + darabszámok (Összes / Letöltés alatt / Kész / Aktív / Inaktív / Leállítva / Hibás), plusz **címke (kategória) szűrők**
 - Keresés a listában
 - Torrent hozzáadása **magnet linkből / URL-ből**, **`.torrent` fájlból**, valamint **drag & drop**pal az ablakra
-- Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)**
+- Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
+- **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
 - **Részletek panel** (⌘I) tabokkal: **Általános / Fájlok / Peerek / Trackerek**; fájlonkénti szelekció és prioritás; **torrentenkénti sebességkorlát**; **címkék/kategóriák** szerkesztése
 - **RSS auto-letöltő** — figyelt feed-ek + cím-szűrő szabályok (tartalmazás vagy `/regex/`) → automatikus torrent-hozzáadás, duplikátum-szűréssel
 - **mTLS kliens-tanúsítvány** hitelesítés (opcionális `.p12` szerverenként) olyan reverse proxyhoz, ami megköveteli
@@ -88,9 +89,9 @@ transmission-daemon --foreground --port 9091
 ## Későbbi lehetőségek
 
 - Letöltési sor (queue) mozgatás
-- Torrent áthelyezése (set-location), tracker hozzáadás/törlés, átnevezés
+- Tracker hozzáadás / törlés
 - Watch-folder
-- Jobbklikk (context) menü, oszlop-testreszabás
+- Oszlop-testreszabás
 - JSON-RPC 2.0 (Transmission 4.1+) támogatás
 
 ## Licenc
