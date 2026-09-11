@@ -23,7 +23,8 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **label (category) filters**
 - Search within the list
 - Add torrents via **magnet link / URL**, **`.torrent` file**, or **drag & drop** onto the window
-- Start / stop / remove (optionally along with data), **verify**, and **reannounce** (toolbar "More actions" menu)
+- Start / stop / remove (optionally along with data), **verify**, and **reannounce** — from the toolbar or the row's **right-click context menu**
+- **Right-click context menu** on torrent rows, which also offers **move** (`torrent-set-location`, with an optional "move the files" switch), **rename** (`torrent-rename-path`), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.
 - **Details panel** (toggled with ⌘I) with tabs: **General / Files / Peers / Trackers**
   - Per-file download selection and priority; **per-torrent speed limit**; **labels/categories** editing
 - **RSS auto-downloader** — watched feeds + title-match rules (substring or `/regex/`) → automatic torrent add, with dedup
@@ -97,9 +98,9 @@ transmission-daemon --foreground --port 9091
 ## Roadmap
 
 - Download queue reordering
-- Move torrent (set-location), tracker add/remove, rename
+- Tracker add / remove
 - Watch folder
-- Right-click context menu, column customization
+- Column customization
 - JSON-RPC 2.0 (Transmission 4.1+) support
 
 ## License
