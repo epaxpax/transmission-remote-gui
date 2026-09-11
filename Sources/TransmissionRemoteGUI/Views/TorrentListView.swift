@@ -61,6 +61,14 @@ struct TorrentListView: View {
             }
             Button(loc("Mégse"), role: .cancel) {}
         }
+        .alert(loc("A művelet nem sikerült"),
+               isPresented: Binding(get: { model.actionError != nil },
+                                    set: { if !$0 { model.actionError = nil } }),
+               presenting: model.actionError) { _ in
+            Button(loc("OK"), role: .cancel) {}
+        } message: { message in
+            Text(message)
+        }
     }
 
     // MARK: Context menu commands

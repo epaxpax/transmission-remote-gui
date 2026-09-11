@@ -117,6 +117,9 @@ struct TorrentTableView: NSViewRepresentable {
         table.target = context.coordinator
         table.doubleAction = #selector(Coordinator.doubleClicked)
         // Right-click / Ctrl-click: the table asks the coordinator for a menu for the clicked row.
+        // The placeholder `menu` is never shown (the override always supplies the real one);
+        // it only guarantees AppKit takes the contextual-menu path at all.
+        table.menu = NSMenu()
         table.menuProvider = { [weak coordinator = context.coordinator] row in
             coordinator?.menu(forClickedRow: row)
         }
@@ -170,14 +173,15 @@ struct TorrentTableView: NSViewRepresentable {
                 tv.selectRowIndexes(rows, byExtendingSelection: false)   // also syncs the SwiftUI binding
             }
 
-            menuTargets = rows.compactMap { $0 < data.count ? data[$0] : nil }
+            menuTargets = TorrentRowMenu.targets(rows: rows, in: data)
             guard !menuTargets.isEmpty else { return nil }
 
             // Titles are refreshed on every open so a language switch is picked up for free.
             for item in rowMenu.items {
                 guard let command = item.representedObject as? TorrentRowCommand,
-                      let spec = Self.menuItems.first(where: { $0.command == command }) else { continue }
-                item.title = loc(spec.title)
+                      let entry = TorrentRowMenu.layout.first(where: { $0.command == command })
+                else { continue }
+                item.title = loc(entry.titleKey)
                 item.isEnabled = TorrentRowMenu.isEnabled(command, for: menuTargets)
             }
             return rowMenu
@@ -188,34 +192,19 @@ struct TorrentTableView: NSViewRepresentable {
             parent.onCommand(command, menuTargets)
         }
 
-        /// Menu layout: `nil` marks a separator.
-        private static let menuItems: [(command: TorrentRowCommand, title: String)] = [
-            (.start, "Indítás"),
-            (.stop, "Leállítás"),
-            (.move, "Áthelyezés…"),
-            (.rename, "Átnevezés…"),
-            (.verify, "Ellenőrzés (verify)"),
-            (.reannounce, "Újrabejelentés a trackernek"),
-            (.copyName, "Név másolása"),
-            (.copyHash, "Hash másolása"),
-            (.removeKeepData, "Törlés a listából"),
-            (.removeWithData, "Törlés az adatokkal együtt"),
-        ]
-
-        /// Commands after which a separator is drawn.
-        private static let separatorsAfter: Set<TorrentRowCommand> = [.stop, .rename, .reannounce, .copyHash]
-
+        /// Builds the menu from `TorrentRowMenu.layout`, so a command can never be
+        /// added to the enum and silently left out of the menu.
         private static func makeRowMenu(target: Coordinator) -> NSMenu {
             let menu = NSMenu()
             menu.autoenablesItems = false   // enablement comes from TorrentRowMenu.isEnabled
-            for spec in menuItems {
-                let item = NSMenuItem(title: loc(spec.title),
+            for entry in TorrentRowMenu.layout {
+                let item = NSMenuItem(title: loc(entry.titleKey),
                                       action: #selector(Coordinator.menuCommandSelected(_:)),
                                       keyEquivalent: "")
                 item.target = target
-                item.representedObject = spec.command
+                item.representedObject = entry.command
                 menu.addItem(item)
-                if separatorsAfter.contains(spec.command) { menu.addItem(.separator()) }
+                if entry.separatorAfter { menu.addItem(.separator()) }
             }
             return menu
         }
@@ -329,6 +318,7 @@ final class RowMenuTableView: NSTableView {
     var menuProvider: ((Int) -> NSMenu?)?
 
     override func menu(for event: NSEvent) -> NSMenu? {
+        _ = super.menu(for: event)   // let NSTableView set clickedRow/clickedColumn first
         let point = convert(event.locationInWindow, from: nil)
         return menuProvider?(row(at: point))
     }

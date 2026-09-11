@@ -317,8 +317,15 @@ public extension RPCClient {
 
     /// Moves a torrent's data to `location` (`move: true`), or just records that the data
     /// already lives there (`move: false`).
+    ///
+    /// Only explicit identifiers are accepted: an omitted `ids` key means *every torrent*
+    /// to the daemon, and silently relocating a whole library is not something a caller
+    /// should be able to ask for by accident.
     func torrentSetLocation(ids: RPCIds, location: String, move: Bool) async throws {
-        let args = SetLocationArgs(ids: ids.normalizedForRequest, location: location, move: move)
+        guard case .ids(let identifiers) = ids, !identifiers.isEmpty else {
+            throw RPCError.rpcFailure("torrent-set-location requires explicit torrent ids")
+        }
+        let args = SetLocationArgs(ids: .ids(identifiers), location: location, move: move)
         let _: EmptyArgs = try await send(method: "torrent-set-location", arguments: args)
     }
 
