@@ -48,8 +48,6 @@ final class AppModel {
     /// Separate from `connection`, which describes the link to the server.
     var actionError: String?
 
-    /// Rule engine state. Owned here so every view reaches the same instance.
-    let ruleStore = RuleStore()
     /// Sort order of the list (controlled by the Table header). Default: newest additions first.
     var sortOrder: [KeyPathComparator<Torrent>] = [
         KeyPathComparator(\.addedDateSortKey, order: .reverse)
@@ -87,6 +85,9 @@ final class AppModel {
     /// RSS auto-downloader: feeds + rules + dedup (persisted).
     let rss = RSSStore()
     private var rssPollTask: Task<Void, Never>?
+
+    /// Rule engine state. Owned here so every view reaches the same instance.
+    let ruleStore = RuleStore()
 
     /// Torrent IDs already known to be in the "download finished" state — we notify for
     /// newly finished ones. The `completedSeeded` flag indicates that the first (post-connect)
@@ -347,7 +348,18 @@ final class AppModel {
     /// manual "run now".
     func previewRules(_ rules: [TorrentRule], force: Bool) async -> [PlannedChange] {
         guard let client else { return [] }
-        let ids = torrents.map(\.id)
+        let classified = ruleStore.classifiedHashes
+        // `force` re-plans everything, including already-classified torrents, so the id
+        // list must stay unfiltered in that case. When it's false, the engine discards
+        // already-classified torrents anyway (a hash-less torrent is never considered
+        // classified, so it's always kept) — filter here so a multi-thousand torrent
+        // library doesn't send every id through a full `ruleInputs` fetch for nothing.
+        let ids = force ? torrents.map(\.id) : torrents
+            .filter { torrent in
+                guard let hash = torrent.hashString else { return true }
+                return !classified.contains(hash)
+            }
+            .map(\.id)
         do {
             return try await RuleRunner.plan(client: client, rules: rules, ids: ids,
                                              alreadyClassified: ruleStore.classifiedHashes,
@@ -363,7 +375,7 @@ final class AppModel {
     func applyPlan(_ plan: [PlannedChange]) async {
         guard let client else { return }
         let result = await RuleRunner.apply(plan, client: client)
-        for hash in result.applied { ruleStore.markClassified(hash) }
+        ruleStore.markClassified(Set(result.applied))
         ruleStore.lastRun = RunSummary(date: Date(), applied: result.applied.count,
                                        failed: result.failures.count, messages: result.failures)
         if !result.failures.isEmpty {
@@ -375,7 +387,12 @@ final class AppModel {
     /// The background pass: plans and applies for torrents not seen before. Never
     /// raises an alert — failures go to `ruleStore.lastRun`, visible in the Rules window.
     func runRulesInBackground() async {
-        guard ruleStore.enabled, !ruleStore.rules.isEmpty, let client else { return }
+        // Skip while the connection is down: `torrents` is stale, a `torrentGet` would
+        // just fail, and — critically — a failed pass must not overwrite `lastRun`
+        // (the only feedback surface this feature has) with a connection error every
+        // 5 seconds, discarding the last real summary.
+        guard case .connected = connection, ruleStore.enabled,
+              ruleStore.rules.contains(where: \.enabled), let client else { return }
         let classified = ruleStore.classifiedHashes
         let candidates = torrents.filter { torrent in
             guard let hash = torrent.hashString else { return false }
@@ -387,13 +404,16 @@ final class AppModel {
                                                  ids: candidates.map(\.id),
                                                  alreadyClassified: classified, force: false)
             // A torrent that matches nothing must still count as handled, or every pass
-            // would re-query it forever.
+            // would re-query it forever. (A torrent removed from the daemon between this
+            // poll's snapshot and the ruleInputs fetch is likewise absent from the plan
+            // and gets marked here too — harmless, just a dead hash in a bounded set.)
             let planned = Set(plan.compactMap(\.torrentHash))
             let result = await RuleRunner.apply(plan, client: client)
-            for hash in result.applied { ruleStore.markClassified(hash) }
+            var toMark = Set(result.applied)
             for torrent in candidates {
-                if let hash = torrent.hashString, !planned.contains(hash) { ruleStore.markClassified(hash) }
+                if let hash = torrent.hashString, !planned.contains(hash) { toMark.insert(hash) }
             }
+            ruleStore.markClassified(toMark)
             if result.applied.count + result.failures.count > 0 {
                 ruleStore.lastRun = RunSummary(date: Date(), applied: result.applied.count,
                                                failed: result.failures.count, messages: result.failures)

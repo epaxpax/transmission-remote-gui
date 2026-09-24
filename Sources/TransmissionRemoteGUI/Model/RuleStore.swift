@@ -53,7 +53,18 @@ final class RuleStore {
     var classifiedHashes: Set<String> { classified }
 
     func markClassified(_ hash: String) {
-        classified.insert(hash)
+        markClassified([hash])
+    }
+
+    /// Bulk variant: `classified`'s `didSet` re-encodes and persists the whole set, so
+    /// marking a whole pass's worth of torrents one hash at a time would JSON-encode an
+    /// ever-growing set once per torrent — seconds of main-actor work for a seedbox-sized
+    /// library on the very first pass. Callers marking more than one hash at a time
+    /// (`RuleRunner`'s background pass and `applyPlan`) must go through this, not a loop
+    /// over the single-hash overload.
+    func markClassified(_ hashes: Set<String>) {
+        guard !hashes.isEmpty else { return }   // skip the mutation entirely — no pointless persist
+        classified.formUnion(hashes)            // one didSet → one persist
         if classified.count > Self.classifiedLimit {
             // Set has no defined order, so this trims an arbitrary excess (bounds
             // memory only) — the same approach RSSStore.markSeen uses.
