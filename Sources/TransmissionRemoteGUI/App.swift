@@ -5,7 +5,9 @@ import TransmissionKit
 @main
 struct TransmissionRemoteGUIApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel()
+    /// Owned by the app delegate, so Finder / browser open events (which AppKit delivers to the
+    /// delegate, possibly before any window exists) can reach it.
+    private var model: AppModel { appDelegate.model }
 
     /// Identifier of the main window — used to reopen it from the menu bar (`openWindow`).
     static let mainWindowID = "main"
@@ -14,9 +16,13 @@ struct TransmissionRemoteGUIApp: App {
         WindowGroup(id: Self.mainWindowID) {
             ContentView()
                 .environment(model)
+
                 .frame(minWidth: 960, minHeight: 560)
         }
         .windowToolbarStyle(.unified)
+        // Open events (.torrent files, magnet links) are handled by `AppDelegate`; without this
+        // SwiftUI would additionally open a new main window for each one.
+        .handlesExternalEvents(matching: [])
         .commands {
             CommandGroup(after: .toolbar) {
                 Button(loc("Nagyítás")) { model.zoomIn() }
@@ -40,7 +46,7 @@ struct TransmissionRemoteGUIApp: App {
         MenuBarExtra {
             MenuBarContent(model: model)
         } label: {
-            MenuBarLabel(model: model)
+            MenuBarLabel(model: model, delegate: appDelegate)
         }
         .menuBarExtraStyle(.window)
     }
@@ -49,6 +55,8 @@ struct TransmissionRemoteGUIApp: App {
 /// Label shown in the menu bar: icon + current down/up speed.
 private struct MenuBarLabel: View {
     let model: AppModel
+    let delegate: AppDelegate
+    @Environment(\.openWindow) private var openWindow
     var body: some View {
         let down = model.sessionStats?.downloadSpeed ?? 0
         let up = model.sessionStats?.uploadSpeed ?? 0
@@ -58,6 +66,9 @@ private struct MenuBarLabel: View {
                 Text("↓\(short(down)) ↑\(short(up))").font(.caption.monospacedDigit())
             }
         }
+        // The menu bar label is rendered from launch on, even when no window exists — so it is
+        // where the app delegate gets a way to (re)open the main window for open events.
+        .task { delegate.openMainWindow = { openWindow(id: TransmissionRemoteGUIApp.mainWindowID) } }
     }
 
     /// Compact speed for the menu bar (e.g. "1.2M").
@@ -127,7 +138,17 @@ private struct MenuBarContent: View {
 
 /// An app launched from SwiftPM (without a bundle) must request the `.regular` activation
 /// policy manually, otherwise it gets no focus and no Dock icon appears.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let model = AppModel()
+
+    /// `.torrent` files (Finder "Open" / "Open With" / double-click) and `magnet:` links
+    /// (clicked in a browser).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        model.openIncoming(urls)
+        showMainWindow()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Dock icon visibility is decided by the saved setting (toggleable from the menu bar).
         let showDock = (UserDefaults.standard.object(forKey: AppModel.showDockIconKey) as? Bool) ?? true
@@ -135,6 +156,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.applicationIconImage = AppIcon.dockIcon()
         NSApp.activate(ignoringOtherApps: true)
         Notifier.requestAuthorization()
+    }
+
+    /// Opens the main `WindowGroup` window (set by the menu bar label once it is rendered).
+    var openMainWindow: (() -> Void)? {
+        didSet { if wantsMainWindow { showMainWindow() } }
+    }
+    private var wantsMainWindow = false
+
+    /// Brings the main window forward. Needed because the main scene does not handle open
+    /// events: on a cold launch by double-clicking a `.torrent`, SwiftUI opens no window at all.
+    private func showMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if let win = NSApp.windows.first(where: { $0.canBecomeMain && $0.isVisible }) {
+            wantsMainWindow = false
+            win.makeKeyAndOrderFront(nil)
+        } else if let openMainWindow {
+            wantsMainWindow = false
+            openMainWindow()
+        } else {
+            wantsMainWindow = true   // label not rendered yet; `openMainWindow`'s didSet retries
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

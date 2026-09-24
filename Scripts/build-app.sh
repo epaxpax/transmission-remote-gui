@@ -64,6 +64,38 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+    <!-- .torrent files: offered in Finder "Open With" (Alternate: we do not take over the default). -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key><string>BitTorrent Document</string>
+            <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>LSHandlerRank</key><string>Alternate</string>
+            <key>LSItemContentTypes</key><array><string>org.bittorrent.torrent</string></array>
+        </dict>
+    </array>
+    <!-- Declares the type in case no other torrent app on the Mac does. -->
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key><string>org.bittorrent.torrent</string>
+            <key>UTTypeDescription</key><string>BitTorrent Document</string>
+            <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key><array><string>torrent</string></array>
+                <key>public.mime-type</key><array><string>application/x-bittorrent</string></array>
+            </dict>
+        </dict>
+    </array>
+    <!-- magnet: links clicked in a browser. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key><string>Magnet link</string>
+            <key>CFBundleURLSchemes</key><array><string>magnet</string></array>
+        </dict>
+    </array>
 </dict>
 </plist>
 PLIST
