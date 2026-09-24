@@ -29,8 +29,12 @@ struct RulePreviewView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Table(plan) {
+                    // Fixed name columns leave the rest to "Változás": with three equal
+                    // columns a status change ("Downloading → Stopped") was cut off.
                     TableColumn(loc("Torrent"), value: \.torrentName)
+                        .width(170)
                     TableColumn(loc("Szabály"), value: \.ruleName)
+                        .width(130)
                     // One line per field change rather than a single delimiter-joined
                     // string: `RuleEngine.plan` always appends `.stop` last, and a
                     // single-line column truncates exactly that tail first — the one

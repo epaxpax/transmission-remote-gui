@@ -71,6 +71,16 @@ struct RulesView: View {
                     selection = nil
                 }
                 .disabled(selected == nil)
+                // Order decides which rule wins. Drag & drop alone is invisible to keyboard
+                // and VoiceOver users, so the order can also be changed with buttons.
+                Button { moveSelected(by: -1) } label: { Image(systemName: "chevron.up") }
+                    .help(loc("Feljebb"))
+                    .accessibilityLabel(loc("Feljebb"))
+                    .disabled(!canMoveSelected(by: -1))
+                Button { moveSelected(by: 1) } label: { Image(systemName: "chevron.down") }
+                    .help(loc("Lejjebb"))
+                    .accessibilityLabel(loc("Lejjebb"))
+                    .disabled(!canMoveSelected(by: 1))
                 Spacer()
                 // Gated on an *enabled* rule existing, not merely on the list being
                 // non-empty: `RuleEngine.plan` drops disabled rules, so running with all
@@ -125,6 +135,19 @@ struct RulesView: View {
 
     /// "Run now" deliberately forces: the point is to reach torrents an earlier pass
     /// already classified.
+    private func canMoveSelected(by offset: Int) -> Bool {
+        let store = model.ruleStore
+        guard let i = store.rules.firstIndex(where: { $0.id == selection }) else { return false }
+        return store.rules.indices.contains(i + offset)
+    }
+
+    private func moveSelected(by offset: Int) {
+        let store = model.ruleStore
+        guard canMoveSelected(by: offset),
+              let i = store.rules.firstIndex(where: { $0.id == selection }) else { return }
+        store.rules.swapAt(i, i + offset)
+    }
+
     private func runNow(_ rules: [TorrentRule]) async {
         running = true
         defer { running = false }
