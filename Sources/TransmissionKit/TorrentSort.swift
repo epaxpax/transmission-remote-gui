@@ -34,6 +34,7 @@ public enum TorrentSort {
         if kp == \Torrent.ratio            { return by { $0.ratio } }
         if kp == \Torrent.connectedPeers   { return by { $0.connectedPeers } }
         if kp == \Torrent.addedDateSortKey { return by { $0.addedDateSortKey } }
+        if kp == \Torrent.activityDateSortKey { return by { $0.activityDateSortKey } }
 
         return items.sorted(using: order) // unknown key → correct, slow fallback
     }

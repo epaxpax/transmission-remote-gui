@@ -40,6 +40,8 @@ public struct Torrent: Codable, Identifiable, Hashable, Sendable {
     // Metadata
     public var addedDate: Int?
     public var doneDate: Int?
+    /// Last time the daemon saw upload/download activity (unix time, 0 = never).
+    public var activityDate: Int?
     public var downloadDir: String?
     public var comment: String?
     public var creator: String?
@@ -120,6 +122,11 @@ public extension Torrent {
         return Date(timeIntervalSince1970: TimeInterval(doneDate))
     }
 
+    var activityDateValue: Date? {
+        guard let activityDate, activityDate > 0 else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(activityDate))
+    }
+
     // MARK: - Sort keys (for Table columns)
     //
     // `KeyPathComparator` expects a `Comparable` key, but the raw fields are optional
@@ -134,6 +141,9 @@ public extension Torrent {
 
     /// Added date for sorting (missing = 0, goes to the end of the list ascending).
     var addedDateSortKey: Int { addedDate ?? 0 }
+
+    /// Last activity for sorting (never active = 0, goes to the end of the list descending).
+    var activityDateSortKey: Int { activityDate ?? 0 }
 
     /// ETA for sorting: unknown/infinite (`< 0`) should go to the end of the list.
     var etaSortKey: Int {
