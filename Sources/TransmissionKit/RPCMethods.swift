@@ -20,6 +20,14 @@ public enum TorrentFields {
         "files", "fileStats", "peers", "trackerStats", "priorities", "wanted",
         "downloadLimit", "downloadLimited", "uploadLimit", "uploadLimited",
     ]
+
+    /// The minimal field set the rule engine needs: the values it matches on, plus
+    /// every value it might change (so it can skip fields that already match).
+    public static let ruleInputs: [String] = [
+        "id", "hashString", "name", "status", "labels", "trackers",
+        "seedRatioLimit", "seedRatioMode", "seedIdleLimit", "seedIdleMode",
+        "uploadLimit", "uploadLimited", "downloadLimit", "downloadLimited",
+    ]
 }
 
 // MARK: - Argument / response structs
@@ -132,6 +140,13 @@ public struct TorrentSetArgs: Encodable, Sendable {
     public var sequentialDownload: Bool?
     /// User-defined labels (categories/tags) for the torrent.
     public var labels: [String]?
+    /// Torrent-level seeding ratio. The daemon only honours it when
+    /// `seedRatioMode == 1`; sending the limit alone is silently ineffective.
+    public var seedRatioLimit: Double?
+    public var seedRatioMode: Int?
+    /// Minutes of seeding inactivity, with the same mode rule as the ratio pair.
+    public var seedIdleLimit: Int?
+    public var seedIdleMode: Int?
 
     public init(ids: RPCIds) {
         self.ids = ids
@@ -150,6 +165,7 @@ public struct TorrentSetArgs: Encodable, Sendable {
         case uploadLimited = "uploadLimited"
         case sequentialDownload = "sequential_download"
         case labels
+        case seedRatioLimit, seedRatioMode, seedIdleLimit, seedIdleMode
     }
 }
 
