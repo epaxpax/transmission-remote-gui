@@ -53,11 +53,22 @@ public struct Torrent: Codable, Identifiable, Hashable, Sendable {
     public var uploadLimit: Int?
     public var uploadLimited: Bool?
 
+    /// Torrent-level seeding limits. The limit only applies when its mode is 1
+    /// (`TR_RATIOLIMIT_SINGLE` / `TR_IDLELIMIT_SINGLE`); 0 follows the session
+    /// default and 2 means unlimited.
+    public var seedRatioLimit: Double?
+    public var seedRatioMode: Int?
+    /// Minutes of seeding inactivity before the daemon stops the torrent.
+    public var seedIdleLimit: Int?
+    public var seedIdleMode: Int?
+
     // For detail views
     public var files: [TorrentFile]?
     public var fileStats: [TorrentFileStat]?
     public var peers: [Peer]?
     public var trackerStats: [TrackerStat]?
+    /// Lightweight tracker list (announce URLs); the rule engine reads this.
+    public var trackers: [Tracker]?
     public var priorities: [Int]?
     public var wanted: [Int]?
 

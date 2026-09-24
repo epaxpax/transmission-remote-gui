@@ -571,4 +571,59 @@ await t.test("Queue keeps order, drops duplicates and drains exactly once") {
     try t.expectEqual(q.drain(), [])
 }
 
+print("\nTracker + rule-mezők dekódolása")
+
+await t.test("Tracker matchHost a sitename-et használja, ha a daemon adja (4.0+)") {
+    let json = #"{"id":0,"announce":"http://tracker.example.org:6969/announce","sitename":"example","tier":0}"#
+    let tr = try JSONDecoder().decode(Tracker.self, from: Data(json.utf8))
+    try t.expectEqual(tr.matchHost, "example")
+}
+
+await t.test("Tracker matchHost az announce hostjából származtat, ha nincs sitename (3.x)") {
+    let json = #"{"id":0,"announce":"http://tracker.example.org:6969/announce","tier":0}"#
+    let tr = try JSONDecoder().decode(Tracker.self, from: Data(json.utf8))
+    try t.expectEqual(tr.matchHost, "tracker.example.org")
+}
+
+await t.test("Tracker matchHost nil, ha az announce értelmezhetetlen") {
+    let tr = try JSONDecoder().decode(Tracker.self, from: Data(#"{"announce":"nem-url"}"#.utf8))
+    try t.expect(tr.matchHost == nil, "hosztolhatatlan announce -> nil")
+}
+
+await t.test("Torrent dekódolja a trackers tömböt és a seed-limit mezőket") {
+    let json = #"{"id":1,"trackers":[{"announce":"http://a.org/announce"}],"seedRatioLimit":2.5,"seedRatioMode":1,"seedIdleLimit":30,"seedIdleMode":1}"#
+    let tor = try JSONDecoder().decode(Torrent.self, from: Data(json.utf8))
+    try t.expectEqual(tor.trackers?.count, 1)
+    try t.expectEqual(tor.seedRatioLimit, 2.5)
+    try t.expectEqual(tor.seedRatioMode, 1)
+    try t.expectEqual(tor.seedIdleLimit, 30)
+    try t.expectEqual(tor.seedIdleMode, 1)
+}
+
+await t.test("torrent-set kiküldi a seed ratio/idle párokat a helyes kulcsokkal") {
+    MockURLProtocol.reset()
+    MockURLProtocol.handler = { _, _ in (200, [:], #"{"result":"success","arguments":{},"tag":0}"#.data(using: .utf8)!) }
+    var args = TorrentSetArgs(ids: .ids([.id(1)]))
+    args.seedRatioLimit = 2.5
+    args.seedRatioMode = 1
+    args.seedIdleLimit = 30
+    args.seedIdleMode = 1
+    try await makeClient().torrentSet(args)
+    let body = try t.unwrap(MockURLProtocol.lastBodies.last)
+    let json = try t.unwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+    let a = try t.unwrap(json["arguments"] as? [String: Any])
+    try t.expectEqual(a["seedRatioLimit"] as? Double, 2.5)
+    try t.expectEqual(a["seedRatioMode"] as? Int, 1)
+    try t.expectEqual(a["seedIdleLimit"] as? Int, 30)
+    try t.expectEqual(a["seedIdleMode"] as? Int, 1)
+}
+
+await t.test("ruleInputs tartalmaz minden mezőt, amit az összehasonlításhoz olvasunk") {
+    for field in ["id", "hashString", "name", "status", "labels", "trackers",
+                  "seedRatioLimit", "seedRatioMode", "seedIdleLimit", "seedIdleMode",
+                  "uploadLimit", "uploadLimited", "downloadLimit", "downloadLimited"] {
+        try t.expect(TorrentFields.ruleInputs.contains(field), "\(field) hiányzik a ruleInputs-ból")
+    }
+}
+
 exit(Int32(t.summary()))
