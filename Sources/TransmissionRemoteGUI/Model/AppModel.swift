@@ -88,6 +88,10 @@ final class AppModel {
 
     /// Rule engine state. Owned here so every view reaches the same instance.
     let ruleStore = RuleStore()
+    /// While set, `runRulesInBackground` returns immediately. Set after a pass throws,
+    /// cleared when it elapses or when connecting to a server. Not persisted: a restart
+    /// is exactly the moment a user would expect another attempt.
+    private var rulesSkipUntil: Date?
 
     /// Torrent IDs already known to be in the "download finished" state — we notify for
     /// newly finished ones. The `completedSeeded` flag indicates that the first (post-connect)
@@ -235,6 +239,7 @@ final class AppModel {
         completedIDs = []
         completedSeeded = false   // on a new server, do not notify about already-finished torrents
         speedHistory = []
+        rulesSkipUntil = nil      // a different (or repaired) server deserves a fresh attempt
         client = RPCClient(config: server, session: server.makeSession())
         startPolling(interval: server.refreshInterval)
     }
@@ -419,11 +424,27 @@ final class AppModel {
         // 5 seconds, discarding the last real summary.
         guard case .connected = connection, ruleStore.enabled,
               ruleStore.rules.contains(where: \.enabled), let client else { return }
+        // Back off after a thrown pass. A `ruleInputs` fetch that keeps timing out on a
+        // server that still reads as connected marks nothing, so the whole library would
+        // be re-fetched — trackers and all — every poll tick forever, and every failure
+        // would overwrite `lastRun`, destroying the last real summary.
+        if let until = rulesSkipUntil {
+            guard Date() >= until else { return }
+            rulesSkipUntil = nil
+        }
         let classified = ruleStore.classifiedHashes
-        let candidates = torrents.filter { torrent in
+        // Bounded slice, not the whole backlog. On the first tick after the master switch
+        // goes on nothing is classified, so every torrent is a candidate — and `apply`
+        // sends one `torrent-set` (plus an optional `torrent-stop`) per torrent, awaited
+        // serially, with this whole method awaited inside the poll loop before its sleep.
+        // Uncapped, a seedbox-sized library freezes the list, speed graph and stats for
+        // minutes, and quitting mid-pass discards all of it because `markClassified` only
+        // runs at the end. A capped pass converges over several ticks and persists its
+        // progress after each one.
+        let candidates = Array(torrents.filter { torrent in
             guard let hash = torrent.hashString else { return false }
             return !classified.contains(hash)
-        }
+        }.prefix(Self.backgroundPassLimit))
         guard !candidates.isEmpty else { return }
         do {
             let plan = try await RuleRunner.plan(client: client, rules: ruleStore.rules,
@@ -447,8 +468,17 @@ final class AppModel {
         } catch {
             ruleStore.lastRun = RunSummary(date: Date(), applied: 0, failed: 1,
                                            messages: [message(for: error)])
+            rulesSkipUntil = Date().addingTimeInterval(Self.rulesBackoff)
         }
     }
+
+    /// How many unclassified torrents one background pass may handle. See the comment at
+    /// the slice in `runRulesInBackground`.
+    private static let backgroundPassLimit = 200
+    /// How long to stay quiet after a background pass threw. Generous on purpose: the
+    /// failure mode this guards against is a daemon that keeps timing out, which will not
+    /// recover within a poll interval, and "Futtatás most…" stays available throughout.
+    private static let rulesBackoff: TimeInterval = 300
 
     // MARK: - Actions
 
