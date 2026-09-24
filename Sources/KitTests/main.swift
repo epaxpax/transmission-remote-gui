@@ -544,4 +544,31 @@ await t.test("sanitizedLocation accepts POSIX and Windows absolute paths") {
     try t.expectEqual(TorrentRowMenu.sanitizedLocation("D:/media"), "D:/media")
 }
 
+print("\nIncoming torrents (Open With / magnet)")
+
+await t.test("A .torrent file URL is a file, any other file is rejected") {
+    try t.expect(IncomingTorrent.classify(URL(fileURLWithPath: "/tmp/Ubuntu.TORRENT")) == .file(URL(fileURLWithPath: "/tmp/Ubuntu.TORRENT")), ".torrent should be a file")
+    try t.expect(IncomingTorrent.classify(URL(fileURLWithPath: "/tmp/notes.txt")) == nil, ".txt must be rejected")
+}
+
+await t.test("Magnet and http(s) URLs are links, other schemes are rejected") {
+    let magnet = "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=x"
+    try t.expect(IncomingTorrent.classify(URL(string: magnet)!) == .link(magnet), "magnet should be a link")
+    try t.expect(IncomingTorrent.classify(URL(string: "https://example.com/a.torrent")!) == .link("https://example.com/a.torrent"), "https should be a link")
+    try t.expect(IncomingTorrent.classify(URL(string: "ftp://example.com/a.torrent")!) == nil, "ftp must be rejected")
+}
+
+await t.test("Dragged text: trimmed magnet is accepted, plain text is not") {
+    try t.expect(IncomingTorrent.classify(text: "  magnet:?xt=urn:btih:abc\n") == .link("magnet:?xt=urn:btih:abc"), "trimmed magnet")
+    try t.expect(IncomingTorrent.classify(text: "hello world") == nil, "plain text must be rejected")
+}
+
+await t.test("Queue keeps order, drops duplicates and drains exactly once") {
+    var q = IncomingQueue()
+    q.enqueue([.link("magnet:?a"), .link("magnet:?b")])
+    q.enqueue([.link("magnet:?a"), .file(URL(fileURLWithPath: "/tmp/x.torrent"))])
+    try t.expectEqual(q.drain(), [.link("magnet:?a"), .link("magnet:?b"), .file(URL(fileURLWithPath: "/tmp/x.torrent"))])
+    try t.expectEqual(q.drain(), [])
+}
+
 exit(Int32(t.summary()))
