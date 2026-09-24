@@ -150,7 +150,7 @@ struct ContentView: View {
                 }
                 .disabled(!model.supportsSequential)
                 if !model.supportsSequential {
-                    Text(loc("Sorrendi letöltéshez Transmission 4.1+ szükséges"))
+                    Text("\(loc("Sorrendi letöltéshez Transmission 4.1+ szükséges")) (\(loc("a szerveren")): \(model.daemonVersion))")
                 }
             } label: {
                 Label(loc("Egyéb műveletek"), systemImage: "ellipsis.circle")
