@@ -28,9 +28,11 @@ enum RuleRunner {
                                force: force)
     }
 
-    /// Applies a plan, one torrent per request so a single failure cannot take the
-    /// rest of the batch with it. Returns the hashes that were applied successfully
-    /// and the messages of those that were not.
+    /// Applies a plan, one torrent at a time — never batched across torrents — so a
+    /// single failure cannot take the rest of the batch with it. (A change that both
+    /// sets fields and stops still sends two requests, `torrent-set` then
+    /// `torrent-stop`, for that one torrent.) Returns the hashes that were applied
+    /// successfully and the messages of those that were not.
     static func apply(_ plan: [PlannedChange], client: RPCClient) async -> (applied: [String], failures: [String]) {
         var applied: [String] = []
         var failures: [String] = []
