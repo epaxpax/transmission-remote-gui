@@ -23,7 +23,7 @@ struct ContentView: View {
             HSplitView {
                 TorrentListView()
                     .frame(minWidth: 420)
-                    .searchable(text: $model.searchText, placement: .toolbar, prompt: "Keresés")
+                    .searchable(text: $model.searchText, placement: .toolbar, prompt: loc("Keresés"))
                 if showInspector {
                     TorrentDetailView()
                         .frame(minWidth: 260, idealWidth: 300, maxWidth: 400)
