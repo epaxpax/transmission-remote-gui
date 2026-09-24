@@ -21,9 +21,18 @@ struct RuleEditorView: View {
     @State private var labelsOn: Bool
     @State private var labelsText: String
     @State private var stop: Bool
-    @State private var preview: [PlannedChange]?
+    /// The rule's enabled/paused state. Must be carried through unchanged unless the
+    /// user explicitly toggles it here — an unrelated edit (e.g. renaming) must never
+    /// silently re-enable a rule the user deliberately paused.
+    @State private var enabled: Bool
+    /// Backs the nested preview sheet. Stored as `@State` (not derived inside the
+    /// `.sheet(item:)` binding's getter) so its identity is stable across unrelated
+    /// `body` re-evaluations while the sheet is open — a fresh `UUID` on every getter
+    /// call would risk SwiftUI treating it as a new item and re-presenting the sheet.
+    @State private var previewBox: EditorPlanBox?
     /// Whether the last preview fetch failed (vs. genuinely finding nothing to change) —
-    /// see `RulePreviewView.couldNotDetermine`.
+    /// see `RulePreviewView.couldNotDetermine`. Comes straight from `AppModel.previewRules`'s
+    /// `failed` flag, not from a heuristic over the shared `actionError`.
     @State private var previewFailed = false
 
     private let ruleID: UUID
@@ -63,6 +72,7 @@ struct RuleEditorView: View {
         _labelsOn = State(initialValue: !rule.actions.addLabels.isEmpty)
         _labelsText = State(initialValue: rule.actions.addLabels.joined(separator: ", "))
         _stop = State(initialValue: rule.actions.stop)
+        _enabled = State(initialValue: rule.enabled)
     }
 
     var body: some View {
@@ -70,6 +80,7 @@ struct RuleEditorView: View {
             Text(loc("Szabály")).font(.title2.bold())
 
             TextField(loc("Név"), text: $name).textFieldStyle(.roundedBorder)
+            Toggle(loc("Szabály bekapcsolva"), isOn: $enabled)
 
             HStack {
                 Text(loc("Ha a"))
@@ -95,25 +106,21 @@ struct RuleEditorView: View {
             HStack {
                 Button(loc("Mit változtatna?")) {
                     Task {
-                        // Clear any stale error first: an empty result below must reflect
-                        // *this* fetch's outcome, not one left over from an earlier action.
-                        model.actionError = nil
                         let result = await model.previewRules([built], force: true)
-                        preview = result
-                        previewFailed = result.isEmpty && model.actionError != nil
+                        previewFailed = result.failed
+                        previewBox = EditorPlanBox(plan: result.plan)
                     }
                 }
                 Spacer()
                 Button(loc("Mégse")) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(loc("Mentés")) { onSave(built); dismiss() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(conditionValue.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(!isValid)
             }
         }
         .padding(20)
         .frame(width: 560, height: 460)
-        .sheet(item: Binding(get: { preview.map(EditorPlanBox.init) },
-                             set: { if $0 == nil { preview = nil } })) { box in
+        .sheet(item: $previewBox) { box in
             RulePreviewView(plan: box.plan, onApply: { }, couldNotDetermine: previewFailed)   // preview only: no apply from the editor
         }
     }
@@ -127,6 +134,38 @@ struct RuleEditorView: View {
         }
     }
 
+    /// Whether every *enabled* field actually parses. Mirrors `MoveTorrentView`'s
+    /// `sanitized`-gates-the-primary-button pattern: a ticked checkbox whose field
+    /// fails to parse must block Mentés, not silently become "no action" — the user
+    /// believes they set a limit, and the saved rule would otherwise do nothing for it.
+    private var isValid: Bool {
+        guard !conditionValue.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        if ratioOn && Self.parseDouble(ratio) == nil { return false }
+        if idleOn && Self.parseInt(idle) == nil { return false }
+        if upOn && Self.parseInt(up) == nil { return false }
+        if downOn && Self.parseInt(down) == nil { return false }
+        return true
+    }
+
+    /// Parses a decimal field, accepting a comma as the decimal separator — Hungarian
+    /// keyboards produce commas, not periods.
+    private static func parseDouble(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    /// Parses a whole-number field. Accepts a plain integer, and — same comma-as-decimal
+    /// convention as `parseDouble` — a comma/period decimal rounded to the nearest whole
+    /// number, so a mistyped "50,5" in an upload/download field doesn't fail silently.
+    private static func parseInt(_ text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        if let value = Int(trimmed) { return value }
+        guard let decimal = Double(trimmed.replacingOccurrences(of: ",", with: ".")) else { return nil }
+        return Int(decimal.rounded())
+    }
+
     private var built: TorrentRule {
         let condition: RuleCondition
         switch conditionKind {
@@ -135,17 +174,17 @@ struct RuleEditorView: View {
         case .name: condition = .namePattern(conditionValue)
         }
         var actions = RuleActions()
-        if ratioOn { actions.seedRatio = Double(ratio.replacingOccurrences(of: ",", with: ".")) }
-        if idleOn { actions.seedIdleMinutes = Int(idle) }
-        if upOn { actions.uploadLimitKBps = Int(up) }
-        if downOn { actions.downloadLimitKBps = Int(down) }
+        if ratioOn { actions.seedRatio = Self.parseDouble(ratio) }
+        if idleOn { actions.seedIdleMinutes = Self.parseInt(idle) }
+        if upOn { actions.uploadLimitKBps = Self.parseInt(up) }
+        if downOn { actions.downloadLimitKBps = Self.parseInt(down) }
         if labelsOn {
             actions.addLabels = labelsText.split(separator: ",")
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
         }
         actions.stop = stop
-        return TorrentRule(id: ruleID, name: name, enabled: true,
+        return TorrentRule(id: ruleID, name: name, enabled: enabled,
                            condition: condition, actions: actions)
     }
 }
