@@ -346,8 +346,16 @@ final class AppModel {
 
     /// Plans without applying anything — the dry run behind the editor preview and the
     /// manual "run now".
-    func previewRules(_ rules: [TorrentRule], force: Bool) async -> [PlannedChange] {
-        guard let client else { return [] }
+    ///
+    /// `failed` is a dedicated signal, distinct from `plan.isEmpty`: an empty plan alone
+    /// cannot tell "nothing matched" apart from "could not even ask" (no connection, or
+    /// the fetch threw). Callers that show an empty-plan message — `RulePreviewView` via
+    /// its `couldNotDetermine` parameter — should read `failed`, not touch `actionError`
+    /// themselves: doing so risks dismissing an unrelated alert `TorrentListView` has
+    /// bound to the same shared property. `actionError` is still set (and surfaces its
+    /// usual alert) for a genuine RPC failure in the `catch` — just not for "no client".
+    func previewRules(_ rules: [TorrentRule], force: Bool) async -> (plan: [PlannedChange], failed: Bool) {
+        guard let client else { return ([], true) }
         let classified = ruleStore.classifiedHashes
         // `force` re-plans everything, including already-classified torrents, so the id
         // list must stay unfiltered in that case. When it's false, the engine discards
@@ -361,12 +369,13 @@ final class AppModel {
             }
             .map(\.id)
         do {
-            return try await RuleRunner.plan(client: client, rules: rules, ids: ids,
-                                             alreadyClassified: ruleStore.classifiedHashes,
-                                             force: force)
+            let plan = try await RuleRunner.plan(client: client, rules: rules, ids: ids,
+                                                 alreadyClassified: ruleStore.classifiedHashes,
+                                                 force: force)
+            return (plan, false)
         } catch {
             actionError = message(for: error)
-            return []
+            return ([], true)
         }
     }
 
