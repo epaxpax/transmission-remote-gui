@@ -68,23 +68,20 @@ struct ContentView: View {
             if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
                 handled = true
                 _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                    guard let url, url.isFileURL,
-                          url.pathExtension.lowercased() == "torrent" else { return }
-                    Task { @MainActor in await model.addTorrentFile(url) }
+                    guard let url, url.isFileURL, let item = IncomingTorrent.classify(url) else { return }
+                    Task { @MainActor in await model.add(item) }
                 }
             } else if provider.canLoadObject(ofClass: URL.self) {
                 handled = true
                 _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                    guard let url else { return }
-                    Task { @MainActor in await model.add(filename: url.absoluteString) }
+                    guard let url, let item = IncomingTorrent.classify(url) else { return }
+                    Task { @MainActor in await model.add(item) }
                 }
             } else if provider.canLoadObject(ofClass: String.self) {
                 handled = true
                 _ = provider.loadObject(ofClass: String.self) { text, _ in
-                    guard let text else { return }
-                    let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard value.hasPrefix("magnet:") || value.hasPrefix("http") else { return }
-                    Task { @MainActor in await model.add(filename: value) }
+                    guard let text, let item = IncomingTorrent.classify(text: text) else { return }
+                    Task { @MainActor in await model.add(item) }
                 }
             }
         }

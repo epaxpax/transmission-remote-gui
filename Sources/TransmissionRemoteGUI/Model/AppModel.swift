@@ -280,6 +280,7 @@ final class AppModel {
             self.sessionStats = stats
             appendSpeedSample(down: stats.downloadSpeed ?? 0, up: stats.uploadSpeed ?? 0)
             self.connection = .connected
+            await self.addPendingIncoming()
             await self.refreshDetail()
             await self.loadFreeSpace()
         } catch {
@@ -416,6 +417,37 @@ final class AppModel {
 
     func add(metainfoBase64: String, paused: Bool = false) async {
         await perform { _ = try await $0.torrentAdd(metainfoBase64: metainfoBase64, paused: paused) }
+    }
+
+    /// Torrents opened from outside (Finder, browser magnet link) before a connection existed.
+    private var incoming = IncomingQueue()
+
+    /// Entry point for Finder "Open" / "Open With" and clicked magnet links. Adds right away
+    /// when connected; otherwise queues them and (re)connects to the last server — the queue
+    /// is flushed by the first successful poll.
+    func openIncoming(_ urls: [URL]) {
+        let items = urls.compactMap(IncomingTorrent.classify)
+        guard !items.isEmpty else { return }
+        incoming.enqueue(items)
+        if isConnected {
+            Task { await addPendingIncoming() }
+        } else if connection != .connecting {
+            autoConnectIfNeeded()
+        }
+    }
+
+    private func addPendingIncoming() async {
+        for item in incoming.drain() {
+            await add(item)
+        }
+    }
+
+    /// Adds one incoming torrent — shared by Open With, magnet links and drag & drop.
+    func add(_ item: IncomingTorrent) async {
+        switch item {
+        case .file(let url): await addTorrentFile(url)
+        case .link(let value): await add(filename: value)
+        }
     }
 
     /// Adds a `.torrent` file from a URL: security-scoped read + base64 + torrent-add.
