@@ -29,7 +29,31 @@ public struct PlannedChange: Hashable, Sendable, Identifiable {
     public let changes: [FieldChange]
     /// Only the fields that actually differ — never the rule's full action set.
     public let effect: RuleActions
-    public let alsoStop: Bool
+
+    /// Whether a running torrent must be stopped. Derived from `effect.stop`, not a
+    /// second stored copy of the same fact.
+    public var alsoStop: Bool { effect.stop }
+
+    /// Whether `arguments(for:)` returns a `torrent-set` call worth sending. False for a
+    /// stop-only plan, whose only effect is a `torrent-stop` the caller issues separately
+    /// via `alsoStop` — sending an all-nil `torrent-set` in that case would be a pointless
+    /// round trip.
+    public var needsTorrentSet: Bool {
+        effect.seedRatio != nil || effect.seedIdleMinutes != nil
+            || effect.uploadLimitKBps != nil || effect.downloadLimitKBps != nil
+            || !effect.addLabels.isEmpty
+    }
+
+    public init(torrentID: Int, torrentHash: String?, torrentName: String, ruleID: UUID,
+                ruleName: String, changes: [FieldChange], effect: RuleActions) {
+        self.torrentID = torrentID
+        self.torrentHash = torrentHash
+        self.torrentName = torrentName
+        self.ruleID = ruleID
+        self.ruleName = ruleName
+        self.changes = changes
+        self.effect = effect
+    }
 }
 
 public enum RuleEngine {
@@ -51,6 +75,11 @@ public enum RuleEngine {
         guard !active.isEmpty else { return [] }
 
         return torrents.compactMap { torrent -> PlannedChange? in
+            // A torrent with no hash (not yet fully added) is never considered "already
+            // classified" and so is re-planned on every call. That is safe — once its
+            // fields match what the rule wants, no more changes are produced — but it
+            // never gets the "leave the user's manual edits alone" protection that a
+            // hash gives, since there is nothing to remember it by.
             if !force, let hash = torrent.hashString, alreadyClassified.contains(hash) { return nil }
             let hosts = trackerHosts[torrent.id] ?? []
             guard let rule = active.first(where: {
@@ -61,13 +90,13 @@ public enum RuleEngine {
             var changes: [FieldChange] = []
 
             // The limit only takes effect together with mode 1, so a torrent that holds
-            // the right number in GLOBAL mode still needs the write.
+            // the right number in GLOBAL/UNLIMITED mode still needs the write.
             if let wanted = rule.actions.seedRatio,
-               torrent.seedRatioLimit != wanted || torrent.seedRatioMode != 1 {
+               ratioDiffers(torrent.seedRatioLimit, wanted) || torrent.seedRatioMode != 1 {
                 effect.seedRatio = wanted
                 changes.append(FieldChange(field: .seedRatio,
                                            before: describe(torrent.seedRatioLimit, mode: torrent.seedRatioMode),
-                                           after: String(wanted)))
+                                           after: Format.ratio(wanted)))
             }
             if let wanted = rule.actions.seedIdleMinutes,
                torrent.seedIdleLimit != wanted || torrent.seedIdleMode != 1 {
@@ -82,14 +111,14 @@ public enum RuleEngine {
                torrent.uploadLimit != wanted || torrent.uploadLimited != true {
                 effect.uploadLimitKBps = wanted
                 changes.append(FieldChange(field: .uploadLimit,
-                                           before: torrent.uploadLimited == true ? String(torrent.uploadLimit ?? 0) : "—",
+                                           before: describeLimited(torrent.uploadLimit, limited: torrent.uploadLimited),
                                            after: String(wanted)))
             }
             if let wanted = rule.actions.downloadLimitKBps,
                torrent.downloadLimit != wanted || torrent.downloadLimited != true {
                 effect.downloadLimitKBps = wanted
                 changes.append(FieldChange(field: .downloadLimit,
-                                           before: torrent.downloadLimited == true ? String(torrent.downloadLimit ?? 0) : "—",
+                                           before: describeLimited(torrent.downloadLimit, limited: torrent.downloadLimited),
                                            after: String(wanted)))
             }
             if !rule.actions.addLabels.isEmpty {
@@ -98,14 +127,14 @@ public enum RuleEngine {
                 if merged != existing {
                     effect.addLabels = merged
                     changes.append(FieldChange(field: .labels,
-                                               before: existing.joined(separator: ", "),
+                                               before: existing.isEmpty ? "—" : existing.joined(separator: ", "),
                                                after: merged.joined(separator: ", ")))
                 }
             }
             let mustStop = rule.actions.stop && !torrent.isPaused
             if mustStop {
                 effect.stop = true
-                changes.append(FieldChange(field: .stop, before: torrent.statusText, after: "Leállítva"))
+                changes.append(FieldChange(field: .stop, before: torrent.statusText, after: Torrent.Status.stopped.text))
             }
 
             guard !changes.isEmpty else { return nil }
@@ -115,13 +144,16 @@ public enum RuleEngine {
                                  ruleID: rule.id,
                                  ruleName: rule.name,
                                  changes: changes,
-                                 effect: effect,
-                                 alsoStop: mustStop)
-    	}
+                                 effect: effect)
+        }
     }
 
     /// Turns a planned change into `torrent-set` arguments. Separate from `plan` so the
     /// plan stays a plain value and the wire format can change independently.
+    ///
+    /// `effect.stop` deliberately has no counterpart here — there is no `torrent-set`
+    /// field for it. The caller issues a `torrent-stop` call when `alsoStop` is true;
+    /// check `needsTorrentSet` first to skip this call entirely for a stop-only plan.
     public static func arguments(for change: PlannedChange) -> TorrentSetArgs {
         var args = TorrentSetArgs(ids: .ids([.id(change.torrentID)]))
         if let ratio = change.effect.seedRatio {
@@ -159,14 +191,31 @@ public enum RuleEngine {
         return result
     }
 
+    /// Whether a stored ratio differs meaningfully from the wanted one. A tolerance
+    /// instead of exact equality, because a daemon-rounded ratio (e.g. 1.1000000001)
+    /// must not be treated as a change — that would both re-write it every cycle and
+    /// show a lying "1.1 → 1.1" in the dry-run. `nil` always differs, so a torrent with
+    /// no ratio set yet still gets the write.
+    private static func ratioDiffers(_ current: Double?, _ wanted: Double) -> Bool {
+        guard let current else { return true }
+        return abs(current - wanted) > 0.0001
+    }
+
     /// A limit in GLOBAL/UNLIMITED mode is not in force, so it is shown as "—".
     private static func describe(_ value: Double?, mode: Int?) -> String {
         guard mode == 1, let value else { return "—" }
-        return String(value)
+        return Format.ratio(value)
     }
 
     private static func describeInt(_ value: Int?, mode: Int?) -> String {
         guard mode == 1, let value else { return "—" }
+        return String(value)
+    }
+
+    /// Same "—" convention as `describe`/`describeInt`, for the speed-limit fields,
+    /// which are gated by a `Limited` flag rather than a tri-state mode.
+    private static func describeLimited(_ value: Int?, limited: Bool?) -> String {
+        guard limited == true, let value else { return "—" }
         return String(value)
     }
 }
