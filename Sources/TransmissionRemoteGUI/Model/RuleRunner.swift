@@ -51,7 +51,7 @@ enum RuleRunner {
                 }
                 if let hash = change.torrentHash { applied.append(hash) }
             } catch {
-                let reason = (error as? RPCError)?.errorDescription ?? error.localizedDescription
+                let reason = await locError(error)
                 failures.append("\(change.torrentName): \(reason)")
             }
         }
