@@ -161,6 +161,15 @@ await t.test("Added date descending (newest first)") {
     try t.expectEqual(sorted.map(\.id), [2, 3, 1])
 }
 
+await t.test("Last activity descending — never active goes to the end") {
+    var a = mkTorrent(1, name: "a"); a.activityDate = 1000
+    var b = mkTorrent(2, name: "b"); b.activityDate = 0
+    var c = mkTorrent(3, name: "c"); c.activityDate = 3000
+    let sorted = TorrentSort.apply([a, b, c], [KeyPathComparator(\.activityDateSortKey, order: .reverse)])
+    try t.expectEqual(sorted.map(\.id), [3, 1, 2])
+    try t.expect(b.activityDateValue == nil, "activityDate 0 should display as never")
+}
+
 await t.test("Ascending by ETA — unknown goes to the end") {
     let items = [mkTorrent(1, name: "a", eta: 500), mkTorrent(2, name: "b", eta: -1), mkTorrent(3, name: "c", eta: 100)]
     let sorted = TorrentSort.apply(items, [KeyPathComparator(\.etaSortKey, order: .forward)])

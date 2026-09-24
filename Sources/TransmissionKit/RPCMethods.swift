@@ -11,7 +11,7 @@ public enum TorrentFields {
         "uploadedEver", "downloadedEver", "uploadRatio",
         "rateDownload", "rateUpload", "eta",
         "peersConnected", "peersSendingToUs", "peersGettingFromUs",
-        "addedDate", "doneDate", "downloadDir", "labels",
+        "addedDate", "doneDate", "activityDate", "downloadDir", "labels",
     ]
 
     /// Additional fields needed for the detail view.
