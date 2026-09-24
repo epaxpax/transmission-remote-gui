@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showingAdd = false
     @State private var showingStats = false
     @State private var showingRSS = false
+    @State private var showingRules = false
     @State private var removeConfirm = false
     /// Whether the Details inspector is visible. Hidden by default; toggled via ⌘I / toolbar button. Persistent.
     @AppStorage("showInspector") private var showInspector = false
@@ -39,6 +40,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingRSS) {
             RSSView().environment(model)
+        }
+        .sheet(isPresented: $showingRules) {
+            RulesView().environment(model)
         }
         .confirmationDialog(
             loc("Biztosan törlöd a kijelölt torrent(eket)?"),
@@ -167,6 +171,14 @@ struct ContentView: View {
             Button { showingRSS = true } label: {
                 Label(loc("RSS auto-letöltő"), systemImage: "dot.radiowaves.up.forward")
             }
+        }
+
+        // Rule engine manager (list, order, run).
+        ToolbarItem {
+            Button { showingRules = true } label: {
+                Label(loc("Szabályok"), systemImage: "slider.horizontal.3")
+            }
+            .disabled(!model.isConnected)
         }
 
         // Alternative ("turtle") speed limit on/off — global session toggle.
