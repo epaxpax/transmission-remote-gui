@@ -12,13 +12,15 @@ tiszta lapról írt macOS-újragondolása.
 
 ## Funkciók
 
-- Torrent-lista oszlopokkal (név, állapot, haladás, méret, ↓/↑ ráta, ETA, arány, peerek), gyors natív rendezéssel
+- Torrent-lista oszlopokkal (név, állapot, haladás, méret, ↓/↑ ráta, ETA, arány, peerek, hozzáadva, **utolsó aktivitás**), gyors natív rendezéssel
 - Sidebar szűrők + darabszámok (Összes / Letöltés alatt / Kész / Aktív / Inaktív / Leállítva / Hibás), plusz **címke (kategória) szűrők**
 - Keresés a listában
 - Torrent hozzáadása **magnet linkből / URL-ből**, **`.torrent` fájlból**, valamint **drag & drop**pal az ablakra
+- **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
 - Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
 - **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
 - **Részletek panel** (⌘I) tabokkal: **Általános / Fájlok / Peerek / Trackerek**; fájlonkénti szelekció és prioritás; **torrentenkénti sebességkorlát**; **címkék/kategóriák** szerkesztése
+- **Torrent-szabályok** — trackerenkénti, címkénkénti vagy név szerinti szabályok seed arányra, idle-limitre, sebességkorlátra és címkékre, vagy leállításra. Az első illeszkedő nyer, minden torrent egyszer sorolódik be (a kézi beállítást sosem írja felül), és minden változás előbb **szárazfutásban** látszik. Az arány/idle limitet a daemon tartja be, így zárt app mellett is él. [Képek ↓](#torrent-szabályok)
 - **RSS auto-letöltő** — figyelt feed-ek + cím-szűrő szabályok (tartalmazás vagy `/regex/`) → automatikus torrent-hozzáadás, duplikátum-szűréssel
 - **mTLS kliens-tanúsítvány** hitelesítés (opcionális `.p12` szerverenként) olyan reverse proxyhoz, ami megköveteli
 - **Sebesség-grafikon** — élő mini-chart a sidebarban, részletes **Statisztika panel**, és Stats-szerű **menüsor-popover**
@@ -30,6 +32,14 @@ tiszta lapról írt macOS-újragondolása.
 - **Menüsor (tray) ikon** le/fel sebességgel és élő grafikonnal; a **Dock-ikon elrejthető** (csak a menüsorban él)
 - UI-nagyítás (⌘+ / ⌘− / ⌘0), automatikus, állítható időközű frissítés
 - **Kétnyelvű felület**: angol és magyar, futásidőben váltható (Beállítások → Általános)
+
+## Torrent-szabályok
+
+<p>
+  <img src="docs/rules.png" width="49%" alt="Szabályok ablak">
+  <img src="docs/rule-editor.png" width="49%" alt="Szabály-szerkesztő">
+</p>
+<p><img src="docs/rules-dry-run.png" width="60%" alt="Szárazfutás: mit változtatna"></p>
 
 ## Felépítés
 
@@ -53,7 +63,7 @@ A kliens a **klasszikus** Transmission RPC protokollra céloz
 ```sh
 swift build                            # fordítás
 swift run TransmissionRemoteGUI        # app indítása (fejlesztéshez)
-swift run KitTests                     # egységtesztek (RPC envelope, 409 handshake, modell-dekódolás, URL-normalizálás)
+swift run KitTests                     # egységtesztek (RPC envelope, 409 handshake, modell-dekódolás, URL-normalizálás, szabálymotor)
 ```
 
 ### Telepíthető `.app` bundle
@@ -77,6 +87,22 @@ brew install --cask epaxpax/tap/transmission-remote-gui-macos
 Az `/Applications`-be telepít. Ad-hoc aláírt (nem notarizált) — a cask leveszi a letöltési
 karantént, így Gatekeeper-figyelmeztetés nélkül indul. A `-macos` utótag elkerüli a névütközést
 a Homebrew core (elavult) `transmission-remote-gui` cask-jával.
+
+### UI-tesztek (Xcode nélkül)
+
+A `Scripts/uitest/` a lefordított app egy **izolált másolatát** vezérli (külön bundle ID és home —
+a saját szervereidhez és beállításaidhoz nem nyúl) egy eldobható, dockeres Transmission daemon
+ellen, Accessibility-n, valódi egéreseményeken és képernyőképeken át:
+
+```sh
+./Scripts/build-app.sh
+./Scripts/uitest/helper/build-helper.sh        # egyszer; utána engedélyezd a „TRGUI UITest Helper”-t:
+                                               # Rendszerbeállítások → Adatvédelem → Kisegítő lehetőségek
+python3 Scripts/uitest/test_open_with.py       # Megnyitás / magnet linkek
+python3 Scripts/uitest/test_context_menu.py    # sor-menü minden oszlopon
+python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
+UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # 3.00 helyett Transmission 4.x ellen
+```
 
 ### Tesztelés valódi daemonnal
 
