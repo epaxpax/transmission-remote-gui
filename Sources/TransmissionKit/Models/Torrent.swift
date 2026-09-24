@@ -87,6 +87,22 @@ public extension Torrent {
         case downloading = 4
         case queuedToSeed = 5
         case seeding = 6
+
+        /// Human-readable status text (Hungarian), independent of any per-torrent state
+        /// (verification progress is layered on top by `Torrent.statusText`). The single
+        /// source of truth for this string — other call sites (e.g. the rule engine's
+        /// dry-run) read this instead of duplicating the literal.
+        public var text: String {
+            switch self {
+            case .stopped: return "Leállítva"
+            case .queuedToVerify: return "Ellenőrzésre vár"
+            case .verifying: return "Ellenőrzés"
+            case .queuedToDownload: return "Letöltésre vár"
+            case .downloading: return "Letöltés"
+            case .queuedToSeed: return "Seedelésre vár"
+            case .seeding: return "Seedelés"
+            }
+        }
     }
 
     var statusValue: Status { Status(rawValue: status ?? 0) ?? .stopped }
@@ -94,13 +110,8 @@ public extension Torrent {
     /// Human-readable status text (Hungarian).
     var statusText: String {
         switch statusValue {
-        case .stopped: return "Leállítva"
-        case .queuedToVerify: return "Ellenőrzésre vár"
-        case .verifying: return "Ellenőrzés \(Format.percent(recheckProgress ?? 0))"
-        case .queuedToDownload: return "Letöltésre vár"
-        case .downloading: return "Letöltés"
-        case .queuedToSeed: return "Seedelésre vár"
-        case .seeding: return "Seedelés"
+        case .verifying: return "\(statusValue.text) \(Format.percent(recheckProgress ?? 0))"
+        default: return statusValue.text
         }
     }
 
