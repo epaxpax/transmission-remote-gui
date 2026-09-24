@@ -119,6 +119,7 @@ let englishStrings: [String: String] = [
     "Méret": "Size",
     "Arány": "Ratio",
     "Hozzáadva": "Added",
+    "Utolsó aktivitás": "Last activity",
     "A szerveren futó Transmission daemon verziója": "Version of the Transmission daemon running on the server",
     // Torrent list empty/error states
     "Válassz szervert a Beállításokban (⌘,)": "Choose a server in Settings (⌘,)",
