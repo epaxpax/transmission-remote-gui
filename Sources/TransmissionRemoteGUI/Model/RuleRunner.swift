@@ -19,7 +19,10 @@ enum RuleRunner {
                                                    ids: .ids(ids.map { .id($0) }))
         var hosts: [Int: [String]] = [:]
         for torrent in torrents {
-            hosts[torrent.id] = (torrent.trackers ?? []).compactMap(\.matchHost)
+            // flatMap, not compactMap: each tracker contributes both its sitename and its
+            // announce host (see `Tracker.matchHosts`), so a rule typed from either form
+            // matches on both 3.x and 4.x daemons.
+            hosts[torrent.id] = (torrent.trackers ?? []).flatMap(\.matchHosts)
         }
         return RuleEngine.plan(rules: rules,
                                torrents: torrents,

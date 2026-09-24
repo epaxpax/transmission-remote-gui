@@ -33,11 +33,20 @@ public struct Tracker: Codable, Hashable, Sendable {
         self.sitename = sitename; self.tier = tier
     }
 
-    /// Host the rule conditions match against: `sitename` when the daemon supplies it
-    /// (4.0+), otherwise the host parsed out of the announce URL (3.x).
-    public var matchHost: String? {
-        if let sitename, !sitename.isEmpty { return sitename }
-        guard let announce, let host = URLComponents(string: announce)?.host, !host.isEmpty else { return nil }
-        return host
+    /// Every string a tracker rule may match against: the `sitename` when the daemon
+    /// supplies it (4.0+) *and* the host parsed out of the announce URL.
+    ///
+    /// Both, never one or the other. `sitename` is short ("example"), while the host is
+    /// the full name ("tracker.example.org") — and the full host is what the app shows
+    /// the user, in the torrent detail view's tracker column. Offering only `sitename`
+    /// on a 4.x daemon meant a rule typed from what the UI displayed matched nothing,
+    /// and the dry run reported "nothing would change" — indistinguishable from a rule
+    /// that legitimately matches nothing. Since `RuleMatcher` substring-matches over
+    /// this array, an extra candidate can only ever make a rule more permissive.
+    public var matchHosts: [String] {
+        var out: [String] = []
+        if let sitename, !sitename.isEmpty { out.append(sitename) }
+        if let announce, let host = URLComponents(string: announce)?.host, !host.isEmpty { out.append(host) }
+        return out
     }
 }
