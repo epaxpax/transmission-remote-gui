@@ -179,7 +179,9 @@ enum RuleSummary {
     static func actions(_ a: RuleActions) -> String {
         var parts: [String] = []
         if let r = a.seedRatio { parts.append("\(loc("arány")) \(r)") }
-        if let i = a.seedIdleMinutes { parts.append("\(loc("üresjárat")) \(i)p") }
+        // "m" for minutes, not the Hungarian "p" (perc): a language-independent
+        // abbreviation, same convention as Format.eta's d/h/m/s.
+        if let i = a.seedIdleMinutes { parts.append("\(loc("üresjárat")) \(i)m") }
         if let u = a.uploadLimitKBps { parts.append("↑ \(u)") }
         if let d = a.downloadLimitKBps { parts.append("↓ \(d)") }
         if !a.addLabels.isEmpty { parts.append("+\(a.addLabels.joined(separator: ","))") }

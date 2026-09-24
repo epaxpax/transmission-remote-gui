@@ -352,7 +352,7 @@ let englishStrings: [String: String] = [
     "Streaming (sorrendi) letöltés be": "Enable streaming (sequential)",
     "Streaming letöltés ki": "Disable streaming",
     "Sorrendi letöltéshez Transmission 4.1+ szükséges": "Sequential download requires Transmission 4.1+",
-    "a szerveren": "on the server",
+    "a szerveren": "server",
     "ismeretlen": "unknown",
     // Ütemező — napok
     "Napok": "Days",
