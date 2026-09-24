@@ -106,7 +106,17 @@ struct RuleEditorView: View {
             HStack {
                 Button(loc("Mit változtatna?")) {
                     Task {
-                        let result = await model.previewRules([built], force: true)
+                        // Preview an *enabled* copy. `RuleEngine.plan` filters to enabled
+                        // rules, so previewing `built` while the "Szabály bekapcsolva"
+                        // toggle is off returns an empty plan and the sheet says "nothing
+                        // would change" — for the wrong reason. The question this button
+                        // answers is "what would this rule do", not "is it switched on
+                        // right now". (`RulesView` guards its post-save offer the other
+                        // way, by not offering it at all for a disabled rule; here the
+                        // user pressed the button deliberately.)
+                        var probe = built
+                        probe.enabled = true
+                        let result = await model.previewRules([probe], force: true)
                         previewFailed = result.failed
                         previewBox = EditorPlanBox(plan: result.plan)
                     }

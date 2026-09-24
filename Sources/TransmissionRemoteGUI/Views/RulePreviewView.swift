@@ -74,7 +74,17 @@ struct RulePreviewView: View {
     }
 
     static func describe(_ change: FieldChange) -> String {
-        "\(label(change.field)): \(change.before) → \(change.after)"
+        // `.stop` is the one row whose before/after are prose, not data: they come from
+        // `Torrent.statusText` and `Torrent.Status.stopped.text`, Hungarian strings built
+        // in TransmissionKit — which by design contains no `loc()` calls at all. Run just
+        // those through `locStatus`, exactly as the table's status column does, or an
+        // English user reads "Status: Seedelés → Leállítva" in the dry run, the one
+        // surface the design makes their safeguard. The other five fields are numbers and
+        // label lists and must NOT go through `locStatus`.
+        if change.field == .stop {
+            return "\(label(change.field)): \(locStatus(change.before)) → \(locStatus(change.after))"
+        }
+        return "\(label(change.field)): \(change.before) → \(change.after)"
     }
 
     static func label(_ field: RuleField) -> String {
