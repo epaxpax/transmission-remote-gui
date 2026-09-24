@@ -626,4 +626,55 @@ await t.test("ruleInputs tartalmaz minden mezőt, amit az összehasonlításhoz 
     }
 }
 
+print("\nSzabály-feltételek illesztése")
+
+await t.test("textMatches: részszöveg, kis/nagybetű-független") {
+    try t.expect(RuleMatcher.textMatches("Ubuntu 24.04 LTS", pattern: "ubuntu"), "részszöveg")
+    try t.expect(!RuleMatcher.textMatches("Ubuntu", pattern: "debian"), "nem illeszkedő")
+}
+
+await t.test("textMatches: /regex/ alak") {
+    try t.expect(RuleMatcher.textMatches("Show.S01E05.1080p", pattern: "/S\\d+E\\d+/"), "regex")
+    try t.expect(!RuleMatcher.textMatches("Film.2024", pattern: "/S\\d+E\\d+/"), "nem illeszkedő regex")
+}
+
+await t.test("textMatches: hibás regex nem omlik össze, csak nem illeszkedik") {
+    try t.expect(!RuleMatcher.textMatches("bármi", pattern: "/[/"), "hibás regex -> false")
+}
+
+await t.test("textMatches: üres minta soha nem illeszkedik") {
+    try t.expect(!RuleMatcher.textMatches("bármi", pattern: "   "), "üres minta -> false")
+}
+
+await t.test("trackerHost részszövegre illeszt, hogy az x.org fogja a tracker.x.org-ot is") {
+    let tor = Torrent(id: 1)
+    try t.expect(RuleMatcher.matches(.trackerHost("x.org"), torrent: tor, trackerHosts: ["tracker.x.org"]), "részszöveg")
+    try t.expect(RuleMatcher.matches(.trackerHost("X.ORG"), torrent: tor, trackerHosts: ["tracker.x.org"]), "kis/nagybetű")
+    try t.expect(!RuleMatcher.matches(.trackerHost("y.org"), torrent: tor, trackerHosts: ["tracker.x.org"]), "más tracker")
+}
+
+await t.test("trackerHost illeszkedik, ha a torrent BÁRMELYIK trackere stimmel") {
+    let tor = Torrent(id: 1)
+    try t.expect(RuleMatcher.matches(.trackerHost("b.org"), torrent: tor, trackerHosts: ["a.org", "b.org"]), "több tracker")
+}
+
+await t.test("label pontos egyezés, nem részszöveg") {
+    var tor = Torrent(id: 1); tor.labels = ["film"]
+    try t.expect(RuleMatcher.matches(.label("film"), torrent: tor, trackerHosts: []), "pontos")
+    try t.expect(RuleMatcher.matches(.label("FILM"), torrent: tor, trackerHosts: []), "kis/nagybetű-független")
+    try t.expect(!RuleMatcher.matches(.label("fil"), torrent: tor, trackerHosts: []), "részszöveg NEM illeszthet")
+}
+
+await t.test("namePattern a torrent nevére illeszt, név nélkül nem illeszkedik") {
+    var tor = Torrent(id: 1); tor.name = "Ubuntu 24.04"
+    try t.expect(RuleMatcher.matches(.namePattern("ubuntu"), torrent: tor, trackerHosts: []), "név")
+    try t.expect(!RuleMatcher.matches(.namePattern("ubuntu"), torrent: Torrent(id: 2), trackerHosts: []), "nincs név")
+}
+
+await t.test("RuleActions.isEmpty igaz, ha semmit nem állít be") {
+    try t.expect(RuleActions().isEmpty, "üres akció")
+    var a = RuleActions(); a.seedRatio = 2.0
+    try t.expect(!a.isEmpty, "van beállítás")
+}
+
 exit(Int32(t.summary()))
