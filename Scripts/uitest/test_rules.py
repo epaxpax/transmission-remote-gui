@@ -22,7 +22,7 @@ EG = f"group 1 of {ES}"
 LIST = f"outline 1 of scroll area 1 of {RG}"
 TABLE = f"table 1 of scroll area 1 of group 1 of splitter group 1 of group 2 of splitter group 1 of group 1 of {W}"
 # Rules sheet buttons (no AX titles in SwiftUI here → by position)
-NEW, EDIT, DELETE, RUN_NOW, DONE = (f"button {i} of {RG}" for i in range(1, 6))
+NEW, EDIT, DELETE, UP, DOWN, RUN_NOW, DONE = (f"button {i} of {RG}" for i in range(1, 8))
 # Editor: text fields 1 name, 2 condition value, 3 ratio, 4 idle, 5 up, 6 down, 7 label
 #         checkboxes 1 enabled, 2 ratio, 3 idle, 4 up, 5 down, 6 label, 7 stop
 PREVIEW, CANCEL, SAVE = (f"button {i} of {EG}" for i in range(1, 4))
@@ -301,6 +301,21 @@ try:
         assert "Second 2.2" in t and "First 1.1" not in t, t
         dry_run_close()
     check("13. two overlapping rules → the FIRST wins; dragging the second up flips it", e13)
+
+    def e13b():
+        # rows: [Second, First] after the drag. Keyboard/VoiceOver path: the ▲/▼ buttons.
+        assert ui.ax(f"get help of {UP}") == "Move up", ui.ax(f"get help of {UP}")
+        ui.ax(f"select row 1 of {LIST}")
+        time.sleep(0.3)
+        assert not enabled(UP), "Move up is enabled on the first rule"
+        ui.click(DOWN)
+        ui.wait_for(lambda: rule_rows()[:1] == ["First 1.1"], what="Move down to reorder")
+        ui.click(RUN_NOW)
+        p = wait_dry_run()
+        t = texts(p)
+        assert "First 1.1" in t and "Second 2.2" not in t, t
+        dry_run_close()
+    check("13b. the Move up / Move down buttons reorder too (no drag needed)", e13b)
 
     def e14():
         delete_all_rules()
