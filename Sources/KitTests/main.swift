@@ -677,4 +677,135 @@ await t.test("RuleActions.isEmpty igaz, ha semmit nem állít be") {
     try t.expect(!a.isEmpty, "van beállítás")
 }
 
+print("\nSzabálymotor — tervezés")
+
+func ruleFixture(_ name: String, _ condition: RuleCondition, _ actions: RuleActions,
+                 enabled: Bool = true) -> TorrentRule {
+    TorrentRule(name: name, enabled: enabled, condition: condition, actions: actions)
+}
+
+await t.test("Az első illeszkedő szabály nyer, a többit nem nézzük") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"; tor.name = "A"; tor.labels = []
+    let r1 = ruleFixture("első", .trackerHost("x.org"), RuleActions(seedRatio: 2.0))
+    let r2 = ruleFixture("második", .trackerHost("x.org"), RuleActions(seedRatio: 9.0))
+    let plan = RuleEngine.plan(rules: [r1, r2], torrents: [tor],
+                               trackerHosts: [1: ["tracker.x.org"]], alreadyClassified: [])
+    try t.expectEqual(plan.count, 1)
+    try t.expectEqual(plan[0].ruleName, "első")
+    try t.expectEqual(plan[0].effect.seedRatio, 2.0)
+}
+
+await t.test("A letiltott szabályt átugorja") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    let off = ruleFixture("ki", .trackerHost("x.org"), RuleActions(seedRatio: 2.0), enabled: false)
+    let on = ruleFixture("be", .trackerHost("x.org"), RuleActions(seedRatio: 3.0))
+    let plan = RuleEngine.plan(rules: [off, on], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    try t.expectEqual(plan[0].ruleName, "be")
+}
+
+await t.test("A már besorolt torrentet kihagyja, force esetén nem") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(seedRatio: 2.0))
+    let skipped = RuleEngine.plan(rules: [r], torrents: [tor],
+                                  trackerHosts: [1: ["x.org"]], alreadyClassified: ["h1"])
+    try t.expect(skipped.isEmpty, "besorolt -> kihagyva")
+    let forced = RuleEngine.plan(rules: [r], torrents: [tor],
+                                 trackerHosts: [1: ["x.org"]], alreadyClassified: ["h1"], force: true)
+    try t.expectEqual(forced.count, 1)
+}
+
+await t.test("A már beállított értéket nem küldi ki újra") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    tor.seedRatioLimit = 2.0; tor.seedRatioMode = 1
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(seedRatio: 2.0))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    try t.expect(plan.isEmpty, "nincs változás -> a torrent ki sem kerül a tervbe")
+}
+
+await t.test("Ugyanaz a limit, de GLOBAL módban, változásnak számít") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    tor.seedRatioLimit = 2.0; tor.seedRatioMode = 0   // a limit ott van, de a daemon nem használja
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(seedRatio: 2.0))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    try t.expectEqual(plan.count, 1)
+}
+
+await t.test("A seedRatio MINDIG a mode=1 párral megy ki") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(seedRatio: 2.0, seedIdleMinutes: 30))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    let args = RuleEngine.arguments(for: plan[0])
+    try t.expectEqual(args.seedRatioLimit, 2.0)
+    try t.expectEqual(args.seedRatioMode, 1)
+    try t.expectEqual(args.seedIdleLimit, 30)
+    try t.expectEqual(args.seedIdleMode, 1)
+}
+
+await t.test("A sebességkorlát a Limited kapcsolóval együtt megy ki") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    let r = ruleFixture("r", .trackerHost("x.org"),
+                        RuleActions(uploadLimitKBps: 100, downloadLimitKBps: 200))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    let args = RuleEngine.arguments(for: plan[0])
+    try t.expectEqual(args.uploadLimit, 100)
+    try t.expectEqual(args.uploadLimited, true)
+    try t.expectEqual(args.downloadLimit, 200)
+    try t.expectEqual(args.downloadLimited, true)
+}
+
+await t.test("Az addLabels hozzáad, nem helyettesít, és nem duplikál") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"; tor.labels = ["meglévő"]
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(addLabels: ["új", "meglévő"]))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    let args = RuleEngine.arguments(for: plan[0])
+    try t.expectEqual(args.labels, ["meglévő", "új"])
+}
+
+await t.test("Ha minden kért címke megvan, nincs változás") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"; tor.labels = ["a", "b"]
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(addLabels: ["a"]))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    try t.expect(plan.isEmpty, "nincs új címke -> nincs terv")
+}
+
+await t.test("A stop csak futó torrenten számít változásnak") {
+    var running = Torrent(id: 1); running.hashString = "h1"
+    running.status = Torrent.Status.seeding.rawValue
+    var stopped = Torrent(id: 2); stopped.hashString = "h2"
+    stopped.status = Torrent.Status.stopped.rawValue
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(stop: true))
+    let plan = RuleEngine.plan(rules: [r], torrents: [running, stopped],
+                               trackerHosts: [1: ["x.org"], 2: ["x.org"]], alreadyClassified: [])
+    try t.expectEqual(plan.count, 1)
+    try t.expectEqual(plan[0].torrentID, 1)
+    try t.expect(plan[0].alsoStop, "a futót le kell állítani")
+}
+
+await t.test("A terv mezőnként megmondja a régi és az új értéket") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"; tor.name = "A"
+    tor.seedRatioLimit = 1.0; tor.seedRatioMode = 1
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(seedRatio: 2.0))
+    let plan = RuleEngine.plan(rules: [r], torrents: [tor],
+                               trackerHosts: [1: ["x.org"]], alreadyClassified: [])
+    let change = try t.unwrap(plan[0].changes.first { $0.field == .seedRatio })
+    try t.expectEqual(change.before, "1.0")
+    try t.expectEqual(change.after, "2.0")
+}
+
+await t.test("Üres szabálylista vagy üres torrentlista -> üres terv") {
+    var tor = Torrent(id: 1); tor.hashString = "h1"
+    try t.expect(RuleEngine.plan(rules: [], torrents: [tor], trackerHosts: [:],
+                                 alreadyClassified: []).isEmpty, "nincs szabály")
+    let r = ruleFixture("r", .trackerHost("x.org"), RuleActions(seedRatio: 2.0))
+    try t.expect(RuleEngine.plan(rules: [r], torrents: [], trackerHosts: [:],
+                                 alreadyClassified: []).isEmpty, "nincs torrent")
+}
+
 exit(Int32(t.summary()))
