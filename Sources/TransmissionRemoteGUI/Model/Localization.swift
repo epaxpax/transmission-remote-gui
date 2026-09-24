@@ -91,6 +91,7 @@ let englishStrings: [String: String] = [
     // Sidebar filters / state
     "Szűrők": "Filters",
     "Nincs kapcsolat": "Not connected",
+    "Nincs kapcsolat a szerverrel — a megnyitott torrentek a csatlakozás után kerülnek fel.": "Not connected to the server — the opened torrents will be added once it connects.",
     "Csatlakozás…": "Connecting…",
     "Hiba": "Error",
     "Csatlakozva": "Connected",

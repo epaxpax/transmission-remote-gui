@@ -38,6 +38,10 @@ def setup(source_app=os.path.join(ROOT, "dist", "Transmission Remote GUI.app")):
         info = plistlib.load(f)
     info["CFBundleIdentifier"] = BUNDLE_ID
     info["CFBundleName"] = info["CFBundleDisplayName"] = "TRGUI UITest"
+    # Never let the copy become a system handler for magnet links / .torrent files: launched
+    # by LaunchServices it would lack CFFIXED_USER_HOME and see the REAL servers.
+    info.pop("CFBundleURLTypes", None)
+    info.pop("CFBundleDocumentTypes", None)
     with open(plist_path, "wb") as f:
         plistlib.dump(info, f)
     sh("codesign", "--force", "--deep", "-s", "-", APP)
@@ -63,6 +67,7 @@ def teardown():
     lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
     sh(lsregister, "-u", APP, check=False)
     sh("defaults", "delete", BUNDLE_ID, check=False)
+    shutil.rmtree(APP, ignore_errors=True)
 
 
 def ensure_daemon():
@@ -83,6 +88,13 @@ def ensure_daemon():
 def launch(*open_args):
     """Launches (or, if running, sends open events to) the isolated app."""
     sh("open", "--env", f"CFFIXED_USER_HOME={HOME}", "-a", APP, *open_args)
+
+
+def assert_isolated():
+    """Fails loudly if the running copy is not connected to the test daemon (isolation broken)."""
+    wins = wait_for(windows, what="a window")
+    names = {w["name"] for w in wins}
+    assert "uitest-tr3" in names, f"app is not on the test server (windows: {names}) — isolation broken"
 
 
 def pid():
