@@ -24,7 +24,13 @@ final class RuleStore {
     /// Hashes of torrents already handled. Hash rather than id, because ids are only
     /// stable within a session and this set outlives it.
     private var classified: Set<String> = [] { didSet { persist(Array(classified), classifiedKey) } }
-    private static let classifiedLimit = 2000
+    /// Unlike RSSStore's `seen` (a stream of feed items), this set holds one entry per
+    /// torrent the user owns — and this app's core audience is seedbox users who
+    /// routinely run several thousand torrents at once. At a lower limit the set would
+    /// thrash for exactly that audience: every pass would evict entries and force
+    /// re-classification, silently overwriting the manual edits "apply once" promises
+    /// to preserve. 10,000 hashes is roughly 400 KB in UserDefaults — comfortably fine.
+    private static let classifiedLimit = 10000
 
     private let rulesKey = "torrentRules"
     private let enabledKey = "torrentRulesEnabled"
@@ -35,7 +41,13 @@ final class RuleStore {
         enabled = UserDefaults.standard.bool(forKey: enabledKey)
         rules = Self.read([TorrentRule].self, rulesKey) ?? []
         classified = Set(Self.read([String].self, classifiedKey) ?? [])
-        lastRun = Self.read(RunSummary.self, lastRunKey)
+        // Read as an optional, not `RunSummary.self`: persisting a nil `lastRun` writes
+        // the JSON literal `null`, and decoding `null` into a non-optional type fails —
+        // which `read`'s `try?` would silently turn into `nil` too, but only by
+        // accident (through a swallowed decode failure, not a decoded absence). Reading
+        // `RunSummary?.self` decodes `null` into a real `nil` on purpose. Do not
+        // "simplify" this back to `RunSummary.self`.
+        lastRun = Self.read(RunSummary?.self, lastRunKey) ?? nil
     }
 
     var classifiedHashes: Set<String> { classified }
