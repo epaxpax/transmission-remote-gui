@@ -38,6 +38,13 @@ jobs:
             echo "$bad"; exit 1
           fi
 
+  site-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Website feature list and screenshots match README.md
+        run: python3 Scripts/sync-site.py --check
+
   readme:
     if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-readme')
     runs-on: ubuntu-latest

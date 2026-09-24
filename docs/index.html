@@ -144,6 +144,10 @@
   .feat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
   .feat h3{ margin:0 0 6px; font-size:1.05rem; }
   .feat p{ margin:0; color:var(--muted); font-size:.94rem; }
+  .featlist{ columns:2 340px; column-gap:36px; padding-left:1.1em; margin:8px 0 28px; }
+  .featlist li{ break-inside:avoid; margin:0 0 8px; color:var(--muted); }
+  .featlist li strong, .featlist li code{ color:var(--fg, inherit); }
+  .featlist ul{ margin:6px 0 0; padding-left:1.1em; }
   .tablewrap{ overflow-x:auto; }
   table{ border-collapse:collapse; width:100%; margin-top:8px; font-size:.95rem; }
   th,td{ border:1px solid var(--line); padding:9px 12px; text-align:left; }
@@ -191,10 +195,41 @@
     <div class="feat"><h3>🌐 Bilingual</h3><p>English and Hungarian, switchable at runtime. Multiple servers, Keychain passwords, auto-connect.</p></div>
   </div>
 
-  <h2>Torrent rules</h2>
+  <h3>All features</h3>
+  <!-- sync:features:start — generated from README.md by Scripts/sync-site.py, do not edit -->
+  <ul class="featlist">
+  <li>Torrent list with columns (name, status, progress, size, ↓/↑ rate, ETA, ratio, peers, added, <strong>last activity</strong>) and fast native sorting</li>
+  <li>Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus <strong>label (category) filters</strong></li>
+  <li>Search within the list</li>
+  <li>Add torrents via <strong>magnet link / URL</strong>, **<code>.torrent</code> file<strong>, or </strong>drag &amp; drop** onto the window</li>
+  <li><strong>Open With / double-click</strong> a <code>.torrent</code> in Finder, or click a <strong>magnet link</strong> in the browser — added to the current server (queued until connected if the app was closed), without extra windows</li>
+  <li>Start / stop / remove (optionally along with data), <strong>verify</strong>, and <strong>reannounce</strong> — from the toolbar or the row's <strong>right-click context menu</strong></li>
+  <li><strong>Right-click context menu</strong> on torrent rows, which also offers <strong>move</strong> (<code>torrent-set-location</code>, with an optional "move the files" switch), <strong>rename</strong> (<code>torrent-rename-path</code>), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.</li>
+  <li><strong>Details panel</strong> (toggled with ⌘I) with tabs: <strong>General / Files / Peers / Trackers</strong><ul>
+  <li>Per-file download selection and priority; <strong>per-torrent speed limit</strong>; <strong>labels/categories</strong> editing</li>
+  </ul></li>
+  <li><strong>Torrent rules</strong> — per-tracker, per-label or per-name rules that set seed ratio, idle limit, speed limits and labels, or stop the torrent. First match wins, each torrent is classified once (manual changes are never overwritten), and every change is shown in a <strong>dry run</strong> first. Ratio/idle limits are enforced by the daemon, so they keep working while the app is closed. <a href="#torrent-rules">Screenshots ↓</a></li>
+  <li><strong>RSS auto-downloader</strong> — watched feeds + title-match rules (substring or <code>/regex/</code>) → automatic torrent add, with dedup</li>
+  <li><strong>mTLS client-certificate</strong> authentication (optional <code>.p12</code> per server) for a reverse proxy that requires it</li>
+  <li><strong>Speed graph</strong> — a live mini-chart in the sidebar, a detailed <strong>Statistics panel</strong>, and a Stats-style <strong>menu-bar popover</strong></li>
+  <li><strong>Sequential ("streaming") download</strong> (Transmission 4.1+) — pieces download in order so media can be watched while still downloading; no official GUI/Web UI exposes this yet</li>
+  <li><strong>Multiple servers</strong>, managed in Settings; passwords stored in the <strong>Keychain</strong>; <strong>auto-connect</strong> to the last used server on launch</li>
+  <li>Full <strong>session settings</strong> (speed, peers, network, queues, download, seeding) — written immediately via <code>session-set</code></li>
+  <li><strong>Turtle mode</strong> (alternative speed limits) with one click, plus a <strong>bandwidth scheduler</strong> (turbo on/off by time of day and day of week)</li>
+  <li><strong>Notification</strong> when a torrent finishes downloading</li>
+  <li><strong>Menu bar (tray) icon</strong> with ↓/↑ speeds and a live graph; the <strong>Dock icon can be hidden</strong> (app lives in the menu bar only)</li>
+  <li>UI zoom (⌘+ / ⌘− / ⌘0), automatic refresh with configurable interval</li>
+  <li><strong>Bilingual UI</strong>: English and Hungarian, switchable at runtime (Settings → General)</li>
+  </ul>
+  <!-- sync:features:end -->
+
+  <h2 id="torrent-rules">Torrent rules</h2>
   <p style="color:var(--muted)">Set it once per tracker: seed Ubuntu mirrors to ratio 3, stop Debian after two idle days, stop movies right away. Every new torrent is classified once — a manual change is never overwritten — and nothing is applied before you have seen it in the dry run.</p>
-  <img class="shot" src="rules.png" width="1400" height="760" loading="lazy" decoding="async" alt="Rules window: an ordered list of per-tracker and name rules with the engine switch, reorder buttons and Run now">
-  <img class="shot" src="rules-dry-run.png" width="1400" height="760" loading="lazy" decoding="async" alt="Dry run: each torrent the rules would change, with the rule and the old and new value, before anything is applied">
+  <!-- sync:gallery:start — generated from README.md by Scripts/sync-site.py, do not edit -->
+  <img class="shot" src="rules.png" width="1400" height="760" loading="lazy" decoding="async" alt="Rules window: ordered list of rules with the engine switch, reorder buttons and Run now">
+  <img class="shot" src="rule-editor.png" width="1400" height="760" loading="lazy" decoding="async" alt="Rule editor: condition (tracker host / label / name pattern) and actions (seed ratio, idle limit, speed limits, label, stop)">
+  <img class="shot" src="rules-dry-run.png" width="1400" height="760" loading="lazy" decoding="async" alt="Dry run: every torrent the rules would change, with the old and new value, before anything is applied">
+  <!-- sync:gallery:end -->
 
   <h2>Why Transmission Remote GUI vs. transgui or the web UI</h2>
   <div class="tablewrap">
