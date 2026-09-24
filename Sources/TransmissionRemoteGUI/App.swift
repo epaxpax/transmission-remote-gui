@@ -167,9 +167,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Brings the main window forward. Needed because the main scene does not handle open
     /// events: on a cold launch by double-clicking a `.torrent`, SwiftUI opens no window at all.
     private func showMainWindow() {
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
-        if let win = NSApp.windows.first(where: { $0.canBecomeMain && $0.isVisible }) {
+        // SwiftUI names WindowGroup windows "<id>-AppWindow-<n>"; this skips Settings, and a
+        // minimized main window counts (bringing it back instead of opening a second one).
+        let mainID = TransmissionRemoteGUIApp.mainWindowID
+        if let win = NSApp.windows.first(where: {
+            ($0.identifier?.rawValue.hasPrefix(mainID) ?? false) && ($0.isVisible || $0.isMiniaturized)
+        }) {
             wantsMainWindow = false
+            if win.isMiniaturized { win.deminiaturize(nil) }
             win.makeKeyAndOrderFront(nil)
         } else if let openMainWindow {
             wantsMainWindow = false

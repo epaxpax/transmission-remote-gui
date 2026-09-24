@@ -37,37 +37,45 @@ def one_window():
     assert n == 1, f"expected 1 window, found {n}"
 
 
+def ignored(path):
+    before = len(ui.torrents())
+    ui.launch(path)
+    time.sleep(2)
+    n = len(ui.torrents())
+    assert n == before, f"{n - before} torrent(s) added"
+
+
 ui.setup()
-ui.remove_all()
+try:
+    ui.remove_all()
+    print("Open With (#5)")
+    cold = os.path.join(FIX, "cold.torrent")
+    h_cold = ui.make_torrent(cold)
+    check("cold launch with a .torrent adds it", lambda: (ui.launch(cold), added(h_cold)))
+    check("cold launch leaves exactly one window", one_window)
+    check("the copy runs isolated, on the test server", ui.assert_isolated)
 
-print("Open With (#5)")
-cold = os.path.join(FIX, "cold.torrent")
-h_cold = ui.make_torrent(cold)
-check("cold launch with a .torrent adds it", lambda: (ui.launch(cold), added(h_cold)))
-check("cold launch leaves exactly one window", one_window)
+    warm = os.path.join(FIX, "warm.torrent")
+    h_warm = ui.make_torrent(warm)
+    check("opening a .torrent while running adds it", lambda: (ui.launch(warm), added(h_warm)))
+    check("…and does not open a second window", one_window)
 
-warm = os.path.join(FIX, "warm.torrent")
-h_warm = ui.make_torrent(warm)
-check("opening a .torrent while running adds it", lambda: (ui.launch(warm), added(h_warm)))
-check("…and does not open a second window", one_window)
+    h_mag, magnet = ui.make_magnet()
+    check("opening a magnet link adds it", lambda: (ui.launch(magnet), added(h_mag)))
+    check("…and does not open a second window", one_window)
 
-h_mag, magnet = ui.make_magnet()
-check("opening a magnet link adds it", lambda: (ui.launch(magnet), added(h_mag)))
-check("…and does not open a second window", one_window)
+    multi = [os.path.join(FIX, f"multi{i}.torrent") for i in range(3)]
+    h_multi = [ui.make_torrent(p) for p in multi]
+    check("opening several .torrent files at once adds all", lambda: (ui.launch(*multi), [added(h) for h in h_multi]))
 
-multi = [os.path.join(FIX, f"multi{i}.torrent") for i in range(3)]
-h_multi = [ui.make_torrent(p) for p in multi]
-check("opening several .torrent files at once adds all", lambda: (ui.launch(*multi), [added(h) for h in h_multi]))
+    txt = os.path.join(FIX, "notes.txt")
+    open(txt, "w").write("not a torrent")
+    check("a non-torrent file is ignored", lambda: ignored(txt))
 
-txt = os.path.join(FIX, "notes.txt")
-open(txt, "w").write("not a torrent")
-before = len(ui.torrents())
-check("a non-torrent file is ignored", lambda: (ui.launch(txt), time.sleep(2), None) and None or
-      (lambda n: (_ for _ in ()).throw(AssertionError(f"{n - before} torrent(s) added")) if n != before else None)(len(ui.torrents())))
-
-ui.screenshot(os.path.join(ui.WORK, "open-with-final.png"))
-ui.remove_all()
-ui.teardown()
+    ui.screenshot(os.path.join(ui.WORK, "open-with-final.png"))
+finally:
+    ui.remove_all()
+    ui.teardown()
 
 failed = [n for n, e in results if e]
 print(f"\n{len(results) - len(failed)} passed, {len(failed)} failed")
