@@ -113,11 +113,19 @@ final class AppModel {
     var totalUploaded: Int { torrents.reduce(0) { $0 + ($1.uploadedEver ?? 0) } }
     var activeTorrentCount: Int { torrents.reduce(0) { $0 + ($1.isActive ? 1 : 0) } }
 
+    /// Strips the parenthetical build suffix off a raw daemon version string, e.g.
+    /// `"4.1.1 (32ba7be3)"` → `"4.1.1"`. Shared by `supportsSequential` (which needs the
+    /// numeric major/minor) and `daemonVersion` (which just displays the result), so the
+    /// parsing rule lives in exactly one place.
+    private func versionNumberPrefix(_ raw: String) -> String {
+        raw.prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces)
+    }
+
     /// Sequential ("streaming") download needs Transmission 4.1+. Parses the daemon
     /// version (e.g. "4.1.1 (hash)") → true when major.minor ≥ 4.1.
     var supportsSequential: Bool {
         guard let v = sessionInfo?.version else { return false }
-        let parts = v.prefix { $0 != "(" }
+        let parts = versionNumberPrefix(v)
             .split(separator: ".")
             .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
         guard parts.count >= 2 else { return false }
@@ -128,9 +136,9 @@ final class AppModel {
     /// current version matters: the user needs to know what they have, not only what
     /// the feature needs.
     var daemonVersion: String {
-        (sessionInfo?.version?.prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces)).flatMap {
-            $0.isEmpty ? nil : $0
-        } ?? loc("ismeretlen")
+        guard let v = sessionInfo?.version else { return loc("ismeretlen") }
+        let stripped = versionNumberPrefix(v)
+        return stripped.isEmpty ? loc("ismeretlen") : stripped
     }
 
     init() {
