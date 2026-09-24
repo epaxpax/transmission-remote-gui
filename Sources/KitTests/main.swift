@@ -887,4 +887,26 @@ await t.test("Üres szabálylista vagy üres torrentlista -> üres terv") {
                                  alreadyClassified: []).isEmpty, "nincs torrent")
 }
 
+await t.test("TorrentRule JSON round-trip minden feltétel-típusra") {
+    let actions = RuleActions(seedRatio: 1.5, seedIdleMinutes: 45, uploadLimitKBps: 50,
+                              downloadLimitKBps: 75, addLabels: ["a", "b"], stop: true)
+    let conditions: [RuleCondition] = [.trackerHost("x.org"), .label("film"), .namePattern("ubuntu")]
+    for condition in conditions {
+        let rule = ruleFixture("kör", condition, actions)
+        let data = try JSONEncoder().encode(rule)
+        let decoded = try JSONDecoder().decode(TorrentRule.self, from: data)
+        try t.expectEqual(decoded, rule)
+    }
+}
+
+await t.test("Üres trackerHost/label soha nem illeszkedik") {
+    var tor = Torrent(id: 1); tor.labels = ["film"]
+    try t.expect(!RuleMatcher.matches(.trackerHost(""), torrent: tor, trackerHosts: ["tracker.x.org"]),
+                "üres trackerHost -> false")
+    try t.expect(!RuleMatcher.matches(.trackerHost("   "), torrent: tor, trackerHosts: ["tracker.x.org"]),
+                "csak whitespace trackerHost -> false")
+    try t.expect(!RuleMatcher.matches(.label(""), torrent: tor, trackerHosts: []), "üres label -> false")
+    try t.expect(!RuleMatcher.matches(.label("   "), torrent: tor, trackerHosts: []), "csak whitespace label -> false")
+}
+
 exit(Int32(t.summary()))
