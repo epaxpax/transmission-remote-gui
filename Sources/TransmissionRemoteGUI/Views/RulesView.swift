@@ -87,7 +87,15 @@ struct RulesView: View {
                 // so the user can see and apply its effect on the existing library right
                 // away. Declining (Cancel in the preview) is harmless: the rule stays saved
                 // and still applies to newly added torrents from then on.
-                Task { await offerRetroactiveRun(for: saved) }
+                //
+                // Only when the saved rule is enabled: `RuleEngine.plan` filters to enabled
+                // rules before matching, so a disabled rule always yields an empty plan —
+                // offering the dry run for one would show "nothing would change" for the
+                // wrong reason (disabled, not merely non-matching), which is worse than not
+                // offering it at all.
+                if saved.enabled {
+                    Task { await offerRetroactiveRun(for: saved) }
+                }
             }
             .environment(model)
         }
