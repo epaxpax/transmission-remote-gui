@@ -213,6 +213,7 @@ let englishStrings: [String: String] = [
     "Szabályok": "Rules",
     "Bekapcsolva": "Enabled",
     "Az első illeszkedő szabály érvényesül, ezért a sorrend számít.": "The first matching rule wins, so the order matters.",
+    "A szabálymotor ki van kapcsolva — új torrentekre nem fut le.": "The rule engine is switched off — it will not run for newly added torrents.",
     "Új szabály": "New rule",
     "Futtatás most…": "Run now…",
     "Utolsó futás": "Last run",

@@ -34,6 +34,17 @@ struct RulesView: View {
             Text(loc("Az első illeszkedő szabály érvényesül, ezért a sorrend számít."))
                 .font(.caption).foregroundStyle(.secondary)
 
+            // The master switch is off by default (`RuleStore.enabled` reads an absent
+            // UserDefaults key as false), while both "Futtatás most…" and the post-save
+            // retroactive offer work regardless of it. So the realistic first run is:
+            // create a rule, accept the offer, watch it work — and then nothing ever runs
+            // for a newly added torrent, with no explanation anywhere. Say so instead of
+            // flipping the default: a silent engine is safer than a surprising one.
+            if !store.enabled && !store.rules.isEmpty {
+                Text(loc("A szabálymotor ki van kapcsolva — új torrentekre nem fut le."))
+                    .font(.caption).foregroundStyle(.orange)
+            }
+
             List(selection: $selection) {
                 ForEach(store.rules) { rule in
                     RuleRow(rule: rule) { toggled in
@@ -61,8 +72,13 @@ struct RulesView: View {
                 }
                 .disabled(selected == nil)
                 Spacer()
+                // Gated on an *enabled* rule existing, not merely on the list being
+                // non-empty: `RuleEngine.plan` drops disabled rules, so running with all
+                // of them off costs a full-library `ruleInputs` fetch and then reports
+                // "nothing would change" — the same false negative, for a reason the
+                // button being live actively hides.
                 Button(loc("Futtatás most…")) { Task { await runNow(store.rules) } }
-                    .disabled(running || store.rules.isEmpty)
+                    .disabled(running || !store.rules.contains(where: \.enabled))
             }
 
             if let last = store.lastRun {
