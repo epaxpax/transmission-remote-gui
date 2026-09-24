@@ -124,6 +124,15 @@ final class AppModel {
         return parts[0] > 4 || (parts[0] == 4 && parts[1] >= 1)
     }
 
+    /// The daemon's version as reported, for messages that gate a feature. Naming the
+    /// current version matters: the user needs to know what they have, not only what
+    /// the feature needs.
+    var daemonVersion: String {
+        (sessionInfo?.version?.prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces)).flatMap {
+            $0.isEmpty ? nil : $0
+        } ?? loc("ismeretlen")
+    }
+
     init() {
         if let saved = UserDefaults.standard.object(forKey: Self.uiScaleKey) as? Double {
             self.uiScale = Self.scaleRange.clamped(saved)
