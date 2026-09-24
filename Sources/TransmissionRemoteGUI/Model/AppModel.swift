@@ -47,6 +47,9 @@ final class AppModel {
     /// Last failed action's message, shown as an alert and cleared when dismissed.
     /// Separate from `connection`, which describes the link to the server.
     var actionError: String?
+
+    /// Rule engine state. Owned here so every view reaches the same instance.
+    let ruleStore = RuleStore()
     /// Sort order of the list (controlled by the Table header). Default: newest additions first.
     var sortOrder: [KeyPathComparator<Torrent>] = [
         KeyPathComparator(\.addedDateSortKey, order: .reverse)
@@ -236,6 +239,7 @@ final class AppModel {
             await self.loadSessionInfo()
             while !Task.isCancelled {
                 await self.refresh()
+                await self.runRulesInBackground()
                 try? await Task.sleep(for: .seconds(max(1, interval)))
             }
         }
@@ -334,6 +338,69 @@ final class AppModel {
         }
         if let detail = try? await client.torrentGet(fields: TorrentFields.detail, ids: .ids([.id(id)])).first {
             detailTorrent = detail
+        }
+    }
+
+    // MARK: - Szabályok
+
+    /// Plans without applying anything — the dry run behind the editor preview and the
+    /// manual "run now".
+    func previewRules(_ rules: [TorrentRule], force: Bool) async -> [PlannedChange] {
+        guard let client else { return [] }
+        let ids = torrents.map(\.id)
+        do {
+            return try await RuleRunner.plan(client: client, rules: rules, ids: ids,
+                                             alreadyClassified: ruleStore.classifiedHashes,
+                                             force: force)
+        } catch {
+            actionError = message(for: error)
+            return []
+        }
+    }
+
+    /// Applies a plan the user has seen and confirmed. Surfaces failures in an alert,
+    /// because the user is standing at the button.
+    func applyPlan(_ plan: [PlannedChange]) async {
+        guard let client else { return }
+        let result = await RuleRunner.apply(plan, client: client)
+        for hash in result.applied { ruleStore.markClassified(hash) }
+        ruleStore.lastRun = RunSummary(date: Date(), applied: result.applied.count,
+                                       failed: result.failures.count, messages: result.failures)
+        if !result.failures.isEmpty {
+            actionError = result.failures.joined(separator: "\n")
+        }
+        await refresh()
+    }
+
+    /// The background pass: plans and applies for torrents not seen before. Never
+    /// raises an alert — failures go to `ruleStore.lastRun`, visible in the Rules window.
+    func runRulesInBackground() async {
+        guard ruleStore.enabled, !ruleStore.rules.isEmpty, let client else { return }
+        let classified = ruleStore.classifiedHashes
+        let candidates = torrents.filter { torrent in
+            guard let hash = torrent.hashString else { return false }
+            return !classified.contains(hash)
+        }
+        guard !candidates.isEmpty else { return }
+        do {
+            let plan = try await RuleRunner.plan(client: client, rules: ruleStore.rules,
+                                                 ids: candidates.map(\.id),
+                                                 alreadyClassified: classified, force: false)
+            // A torrent that matches nothing must still count as handled, or every pass
+            // would re-query it forever.
+            let planned = Set(plan.compactMap(\.torrentHash))
+            let result = await RuleRunner.apply(plan, client: client)
+            for hash in result.applied { ruleStore.markClassified(hash) }
+            for torrent in candidates {
+                if let hash = torrent.hashString, !planned.contains(hash) { ruleStore.markClassified(hash) }
+            }
+            if result.applied.count + result.failures.count > 0 {
+                ruleStore.lastRun = RunSummary(date: Date(), applied: result.applied.count,
+                                               failed: result.failures.count, messages: result.failures)
+            }
+        } catch {
+            ruleStore.lastRun = RunSummary(date: Date(), applied: 0, failed: 1,
+                                           messages: [message(for: error)])
         }
     }
 
