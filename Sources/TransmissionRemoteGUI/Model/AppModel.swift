@@ -283,7 +283,7 @@ final class AppModel {
             await self.refreshDetail()
             await self.loadFreeSpace()
         } catch {
-            self.connection = .failed((error as? RPCError)?.errorDescription ?? error.localizedDescription)
+            self.connection = .failed(locError(error))
         }
     }
 
@@ -472,7 +472,7 @@ final class AppModel {
     }
 
     private func message(for error: Error) -> String {
-        (error as? RPCError)?.errorDescription ?? error.localizedDescription
+        locError(error)
     }
 
     // MARK: - Server management

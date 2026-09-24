@@ -1,3 +1,4 @@
+import TransmissionKit
 import Foundation
 import Observation
 
@@ -59,6 +60,23 @@ func loc(_ key: String) -> String {
     return englishStrings[key] ?? key
 }
 
+/// Localized text for an error. `RPCError`'s own descriptions are Hungarian (the Kit has no
+/// access to `loc`), so its cases are translated here; the daemon's / system's detail text
+/// is appended as-is.
+@MainActor
+func locError(_ error: Error) -> String {
+    guard let rpc = error as? RPCError else { return error.localizedDescription }
+    switch rpc {
+    case .invalidURL: return loc("Érvénytelen szerver URL.")
+    case .transport(let message): return loc("Hálózati hiba:") + " " + message
+    case .http(let code): return loc("HTTP hiba:") + " \(code)"
+    case .unauthorized: return loc("Hibás felhasználónév vagy jelszó.")
+    case .rpcFailure(let message): return loc("A daemon hibát adott:") + " " + message
+    case .decoding(let message): return loc("Feldolgozási hiba:") + " " + message
+    case .missingSessionID: return loc("Nem sikerült megszerezni a session azonosítót.")
+    }
+}
+
 /// Hungarian → English translations. Missing keys are shown in Hungarian (grows gradually).
 let englishStrings: [String: String] = [
     // General actions / toolbar
@@ -73,6 +91,14 @@ let englishStrings: [String: String] = [
     "Mentés": "Save",
     "Részletek": "Details",
     "Keresés": "Search",
+    // RPC errors (see `locError`)
+    "Érvénytelen szerver URL.": "Invalid server URL.",
+    "Hálózati hiba:": "Network error:",
+    "HTTP hiba:": "HTTP error:",
+    "Hibás felhasználónév vagy jelszó.": "Wrong username or password.",
+    "A daemon hibát adott:": "The daemon returned an error:",
+    "Feldolgozási hiba:": "Could not process the response:",
+    "Nem sikerült megszerezni a session azonosítót.": "Could not obtain a session id from the daemon.",
     "Kilépés": "Quit",
     "Nagyítás": "Zoom in",
     "Kicsinyítés": "Zoom out",
