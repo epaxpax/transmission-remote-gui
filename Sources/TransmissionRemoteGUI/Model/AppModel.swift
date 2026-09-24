@@ -206,6 +206,7 @@ final class AppModel {
     // MARK: - Connection
 
     func connect(to server: ServerConfig) {
+        if server.id != incomingServerID { _ = incoming.drain() }
         selectedServerID = server.id
         stopPolling()
         connection = .connecting
@@ -421,6 +422,9 @@ final class AppModel {
 
     /// Torrents opened from outside (Finder, browser magnet link) before a connection existed.
     private var incoming = IncomingQueue()
+    /// The server the queued torrents were meant for. Switching to another server drops the
+    /// queue, so nothing lands on a server the user did not have selected when opening them.
+    private var incomingServerID: UUID?
 
     /// Entry point for Finder "Open" / "Open With" and clicked magnet links. Adds right away
     /// when connected; otherwise queues them and (re)connects to the last server — the queue
@@ -428,15 +432,22 @@ final class AppModel {
     func openIncoming(_ urls: [URL]) {
         let items = urls.compactMap(IncomingTorrent.classify)
         guard !items.isEmpty else { return }
+        if incomingServerID != selectedServerID { _ = incoming.drain() }
+        incomingServerID = selectedServerID
         incoming.enqueue(items)
         if isConnected {
             Task { await addPendingIncoming() }
-        } else if connection != .connecting {
-            autoConnectIfNeeded()
+            return
+        }
+        if connection != .connecting { autoConnectIfNeeded() }
+        if selectedServer == nil || client == nil || connection != .connecting {
+            // No server, or the last attempt failed: without this the open would look ignored.
+            actionError = loc("Nincs kapcsolat a szerverrel — a megnyitott torrentek a csatlakozás után kerülnek fel.")
         }
     }
 
     private func addPendingIncoming() async {
+        guard incomingServerID == selectedServerID else { return }
         for item in incoming.drain() {
             await add(item)
         }
