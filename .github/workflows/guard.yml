@@ -1,0 +1,54 @@
+name: Guard
+
+# Repository hygiene on every PR: no secrets, no personal e-mail addresses in commit
+# metadata, and user-facing changes come with a README update.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks (full history)
+        env: { GITLEAKS_VERSION: "8.28.0" }
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks git --redact --no-banner --exit-code 1 .
+
+  commit-emails:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Author / committer e-mails are GitHub noreply addresses
+        run: |
+          bad=$(git log --format='%h %ae %ce' "origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}" \
+            | awk '$2 !~ /noreply\.github\.com$/ || $3 !~ /noreply\.github\.com$/')
+          if [ -n "$bad" ]; then
+            echo "::error::Commits with a non-noreply e-mail (set: git config user.email <id>+<login>@users.noreply.github.com):"
+            echo "$bad"; exit 1
+          fi
+
+  readme:
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-readme')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: User-facing changes update the README
+        run: |
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...${{ github.event.pull_request.head.sha }}")
+          if echo "$changed" | grep -qE '^Sources/(TransmissionRemoteGUI|TransmissionKit)/' \
+             && ! echo "$changed" | grep -qE '^README(\.hu)?\.md$'; then
+            echo "::error::This PR changes the app but not README.md / README.hu.md. Update them, or add the 'no-readme' label if nothing user-visible changed (internal refactor, pure bug fix)."
+            exit 1
+          fi
