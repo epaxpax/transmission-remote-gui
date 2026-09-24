@@ -573,21 +573,26 @@ await t.test("Queue keeps order, drops duplicates and drains exactly once") {
 
 print("\nTracker + rule-mezők dekódolása")
 
-await t.test("Tracker matchHost a sitename-et használja, ha a daemon adja (4.0+)") {
+await t.test("Tracker matchHosts a sitename-et ÉS az announce hostot is kínálja (4.0+)") {
     let json = #"{"id":0,"announce":"http://tracker.example.org:6969/announce","sitename":"example","tier":0}"#
     let tr = try JSONDecoder().decode(Tracker.self, from: Data(json.utf8))
-    try t.expectEqual(tr.matchHost, "example")
+    try t.expectEqual(tr.matchHosts, ["example", "tracker.example.org"])
 }
 
-await t.test("Tracker matchHost az announce hostjából származtat, ha nincs sitename (3.x)") {
+await t.test("Tracker matchHosts az announce hostjából származtat, ha nincs sitename (3.x)") {
     let json = #"{"id":0,"announce":"http://tracker.example.org:6969/announce","tier":0}"#
     let tr = try JSONDecoder().decode(Tracker.self, from: Data(json.utf8))
-    try t.expectEqual(tr.matchHost, "tracker.example.org")
+    try t.expectEqual(tr.matchHosts, ["tracker.example.org"])
 }
 
-await t.test("Tracker matchHost nil, ha az announce értelmezhetetlen") {
+await t.test("Tracker matchHosts üres, ha az announce értelmezhetetlen és nincs sitename") {
     let tr = try JSONDecoder().decode(Tracker.self, from: Data(#"{"announce":"nem-url"}"#.utf8))
-    try t.expect(tr.matchHost == nil, "hosztolhatatlan announce -> nil")
+    try t.expect(tr.matchHosts.isEmpty, "hosztolhatatlan announce, sitename nélkül -> üres")
+}
+
+await t.test("Tracker matchHosts a sitename-et akkor is adja, ha az announce értelmezhetetlen") {
+    let tr = try JSONDecoder().decode(Tracker.self, from: Data(#"{"announce":"nem-url","sitename":"example"}"#.utf8))
+    try t.expectEqual(tr.matchHosts, ["example"])
 }
 
 await t.test("Torrent dekódolja a trackers tömböt és a seed-limit mezőket") {
@@ -907,6 +912,58 @@ await t.test("Üres trackerHost/label soha nem illeszkedik") {
                 "csak whitespace trackerHost -> false")
     try t.expect(!RuleMatcher.matches(.label(""), torrent: tor, trackerHosts: []), "üres label -> false")
     try t.expect(!RuleMatcher.matches(.label("   "), torrent: tor, trackerHosts: []), "csak whitespace label -> false")
+}
+
+print("\nTracker-illesztés a daemon mindkét alakján (a JSON → RuleEngine teljes út)")
+
+/// The one line `RuleRunner.plan` uses to turn a decoded torrent into match candidates.
+/// Mirrored rather than imported: the app target is out of reach from the Kit tests, and
+/// this is precisely the seam every other test sits on one side of — `matchHosts` is
+/// tested against raw JSON in isolation, `RuleMatcher` against a hand-written host array
+/// that only a 3.x daemon would ever produce. Keep in sync with `RuleRunner.plan`.
+func ruleRunnerHosts(_ torrent: Torrent) -> [String] {
+    (torrent.trackers ?? []).flatMap(\.matchHosts)
+}
+
+/// The same torrent with the same announce URL, as the two daemon generations report it.
+let daemonShapes: [(shape: String, json: String)] = [
+    ("3.x", #"{"id":1,"hashString":"h1","name":"A","labels":[],"trackers":[{"id":0,"announce":"http://tracker.example.org:6969/announce","tier":0}]}"#),
+    ("4.x", #"{"id":1,"hashString":"h1","name":"A","labels":[],"trackers":[{"id":0,"announce":"http://tracker.example.org:6969/announce","sitename":"example","tier":0}]}"#),
+]
+
+await t.test("A teljes hoszt — amit a UI mutat — mindkét daemon-alakon tervet ad") {
+    for (shape, json) in daemonShapes {
+        let tor = try JSONDecoder().decode(Torrent.self, from: Data(json.utf8))
+        let rule = ruleFixture("teljes hoszt", .trackerHost("tracker.example.org"),
+                               RuleActions(seedRatio: 2.0))
+        let plan = RuleEngine.plan(rules: [rule], torrents: [tor],
+                                   trackerHosts: [tor.id: ruleRunnerHosts(tor)],
+                                   alreadyClassified: [])
+        try t.expect(plan.count == 1, "\(shape): a tracker.example.org szabálynak tervet kell adnia")
+        try t.expectEqual(plan.first?.ruleName, "teljes hoszt")
+    }
+}
+
+await t.test("A rövid sitename-alak is mindkét daemon-alakon tervet ad") {
+    for (shape, json) in daemonShapes {
+        let tor = try JSONDecoder().decode(Torrent.self, from: Data(json.utf8))
+        let rule = ruleFixture("sitename", .trackerHost("example"), RuleActions(seedRatio: 2.0))
+        let plan = RuleEngine.plan(rules: [rule], torrents: [tor],
+                                   trackerHosts: [tor.id: ruleRunnerHosts(tor)],
+                                   alreadyClassified: [])
+        try t.expect(plan.count == 1, "\(shape): az example szabálynak tervet kell adnia")
+    }
+}
+
+await t.test("Idegen tracker egyik daemon-alakon sem illeszkedik") {
+    for (shape, json) in daemonShapes {
+        let tor = try JSONDecoder().decode(Torrent.self, from: Data(json.utf8))
+        let rule = ruleFixture("idegen", .trackerHost("other.net"), RuleActions(seedRatio: 2.0))
+        let plan = RuleEngine.plan(rules: [rule], torrents: [tor],
+                                   trackerHosts: [tor.id: ruleRunnerHosts(tor)],
+                                   alreadyClassified: [])
+        try t.expect(plan.isEmpty, "\(shape): a permisszívebb jelöltlista nem hozhat téves találatot")
+    }
 }
 
 exit(Int32(t.summary()))
