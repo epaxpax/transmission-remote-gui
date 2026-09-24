@@ -80,7 +80,7 @@ struct TorrentTableView: NSViewRepresentable {
                    text: { $0.addedDateValue.map(dateFormatter.string(from:)) ?? "—" },
                    color: { _ in .secondaryLabelColor },
                    comparator: { KeyPathComparator(\Torrent.addedDateSortKey, order: $0 ? .forward : .reverse) }),
-        ColumnSpec(id: "activity", title: "Utolsó aktivitás", width: 130, minWidth: 90, monospaced: true,
+        ColumnSpec(id: "activity", title: "Utolsó aktivitás", width: 120, minWidth: 80, monospaced: true,
                    text: { $0.activityDateValue.map(dateFormatter.string(from:)) ?? "—" },
                    color: { _ in .secondaryLabelColor },
                    comparator: { KeyPathComparator(\Torrent.activityDateSortKey, order: $0 ? .forward : .reverse) }),
