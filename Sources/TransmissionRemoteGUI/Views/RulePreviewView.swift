@@ -31,8 +31,20 @@ struct RulePreviewView: View {
                 Table(plan) {
                     TableColumn(loc("Torrent"), value: \.torrentName)
                     TableColumn(loc("Szabály"), value: \.ruleName)
+                    // One line per field change rather than a single delimiter-joined
+                    // string: `RuleEngine.plan` always appends `.stop` last, and a
+                    // single-line column truncates exactly that tail first — the one
+                    // change that must never look absent. The stop line is also made
+                    // visually distinct (icon + bold) so it can't be missed even among
+                    // several other changes.
                     TableColumn(loc("Változás")) { change in
-                        Text(change.changes.map(Self.describe).joined(separator: " · "))
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(change.changes.enumerated()), id: \.offset) { _, fieldChange in
+                                Self.row(for: fieldChange)
+                            }
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
                     }
                 }
                 .frame(minHeight: 260)
@@ -48,6 +60,17 @@ struct RulePreviewView: View {
         }
         .padding(20)
         .frame(width: 700, height: 420)
+    }
+
+    @ViewBuilder
+    static func row(for change: FieldChange) -> some View {
+        if change.field == .stop {
+            Label(describe(change), systemImage: "stop.circle.fill")
+                .fontWeight(.semibold)
+                .foregroundStyle(.orange)
+        } else {
+            Text(describe(change))
+        }
     }
 
     static func describe(_ change: FieldChange) -> String {
