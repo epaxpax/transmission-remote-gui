@@ -344,6 +344,15 @@ final class ProgressCell: NSView {
 
     override var wantsDefaultClipping: Bool { true }
 
+    /// A plain `NSView` answers a Ctrl-click with its own (empty) menu instead of passing it
+    /// up, so the row's context menu opened everywhere except on the progress bar. Ask the
+    /// table instead — the same menu a right-click on this cell gets.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        var view = superview
+        while let v = view, !(v is NSTableView) { view = v.superview }
+        return view?.menu(for: event)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         let bar = bounds.insetBy(dx: 2, dy: 5)
         guard bar.width > 2, bar.height > 2 else { return }
