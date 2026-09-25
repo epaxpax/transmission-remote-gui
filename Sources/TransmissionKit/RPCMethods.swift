@@ -21,10 +21,11 @@ public enum TorrentFields {
         "downloadLimit", "downloadLimited", "uploadLimit", "uploadLimited",
     ]
 
-    /// Tracker announce URLs for the sidebar's tracker filter and the Tracker column. Kept
-    /// OUT of `list` on purpose: the 5-second poll must not carry every torrent's announce
-    /// URLs — the model fetches this only for new torrents and refreshes it rarely.
-    public static let trackers: [String] = ["id", "trackers"]
+    /// Tracker data for the sidebar's tracker filter and the Tracker / Seeds / Leechers
+    /// columns. Kept OUT of `list` on purpose: the 5-second poll must not carry every
+    /// torrent's announce URLs and tracker stats — the model fetches this only for new
+    /// torrents and refreshes it rarely (trackers only re-scrape swarm counts every ~30 min).
+    public static let trackers: [String] = ["id", "trackers", "trackerStats"]
 
     /// The minimal field set the rule engine needs: the values it matches on, plus
     /// every value it might change (so it can skip fields that already match).

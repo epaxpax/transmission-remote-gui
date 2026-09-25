@@ -13,7 +13,7 @@ tiszta lapról írt macOS-újragondolása.
 ## Funkciók
 
 - Torrent-lista oszlopokkal (név, állapot, haladás, méret, ↓/↑ ráta, ETA, arány, peerek, hozzáadva, **utolsó aktivitás**), gyors natív rendezéssel
-- **Testreszabható oszlopok**: jobb klikk a lista fejlécén → oszlopok ki/be — plusz oszlopok: befejezve, hátralévő, letöltve, feltöltve, letöltési mappa, tracker, címkék; a sorrend, a szélesség és a láthatóság megmarad, az *Alapértelmezett oszlopok* visszaállítja
+- **Testreszabható oszlopok**: jobb klikk a lista fejlécén → oszlopok ki/be — plusz oszlopok: befejezve, hátralévő, letöltve, feltöltve, letöltési mappa, **seedek / leecherek** (csatlakozott, és a trackerek szerinti swarm-méret — pl. `3 (120)`), tracker, címkék; a sorrend, a szélesség és a láthatóság megmarad, az *Alapértelmezett oszlopok* visszaállítja
 - Sidebar szűrők + darabszámok (Összes / Letöltés alatt / Kész / Aktív / Inaktív / Leállítva / Hibás), plusz **tracker**, **letöltési mappa** és **címke (kategória)** szűrők darabszámmal — egymással és az állapotszűrővel is kombinálhatók; újra kattintva kikapcsolnak
 - Keresés a listában
 - Torrent hozzáadása **magnet linkből / URL-ből**, **`.torrent` fájlból**, valamint **drag & drop**pal az ablakra

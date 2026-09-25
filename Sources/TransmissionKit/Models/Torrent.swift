@@ -187,6 +187,20 @@ public extension Torrent {
     /// Tracker hosts as one comma-separated string (for display and sorting).
     var trackerText: String { trackerHosts.joined(separator: ", ") }
 
+    /// Swarm size as reported by the trackers: the largest count any tracker gave (trackers
+    /// answer `-1` when they have not scraped yet). nil = unknown or not fetched yet.
+    var swarmSeeders: Int? { (trackerStats ?? []).compactMap(\.seederCount).filter { $0 >= 0 }.max() }
+    var swarmLeechers: Int? { (trackerStats ?? []).compactMap(\.leecherCount).filter { $0 >= 0 }.max() }
+
+    /// transgui's format: peers we download from, then the swarm's seeders — "3 (120)".
+    var seedsText: String { swarmSeeders.map { "\(receivingPeers) (\($0))" } ?? "\(receivingPeers)" }
+    /// Peers we upload to, then the swarm's leechers — "2 (40)".
+    var leechersText: String { swarmLeechers.map { "\(sendingPeers) (\($0))" } ?? "\(sendingPeers)" }
+
+    /// Sorted by swarm size (like transgui); unknown goes first ascending.
+    var seedsSortKey: Int { swarmSeeders ?? -1 }
+    var leechersSortKey: Int { swarmLeechers ?? -1 }
+
     /// Labels as one comma-separated string (for display and sorting).
     var labelsText: String { (labels ?? []).joined(separator: ", ") }
 
