@@ -20,6 +20,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 ## Features
 
 - Torrent list with columns (name, status, progress, size, ↓/↑ rate, ETA, ratio, peers, added, **last activity**) and fast native sorting
+- **Customizable columns**: right-click the list header to show/hide columns — extra ones: completed on, remaining, downloaded, uploaded, download folder, labels; order, widths and visibility are remembered, *Default Columns* resets them
 - Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **label (category) filters**
 - Search within the list
 - Add torrents via **magnet link / URL**, **`.torrent` file**, or **drag & drop** onto the window
@@ -109,6 +110,7 @@ Docker, via Accessibility, real mouse input and screenshots:
                                                # System Settings → Privacy & Security → Accessibility
 python3 Scripts/uitest/test_open_with.py       # Open With / magnet links
 python3 Scripts/uitest/test_context_menu.py    # row context menu on every column
+python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns, persistence, reset
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # against Transmission 4.x instead of 3.00
 ```
@@ -126,7 +128,6 @@ transmission-daemon --foreground --port 9091
 - Download queue reordering
 - Tracker add / remove
 - Watch folder
-- Column customization
 - JSON-RPC 2.0 (Transmission 4.1+) support
 
 ## License

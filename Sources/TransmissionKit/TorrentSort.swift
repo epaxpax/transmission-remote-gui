@@ -35,6 +35,18 @@ public enum TorrentSort {
         if kp == \Torrent.connectedPeers   { return by { $0.connectedPeers } }
         if kp == \Torrent.addedDateSortKey { return by { $0.addedDateSortKey } }
         if kp == \Torrent.activityDateSortKey { return by { $0.activityDateSortKey } }
+        if kp == \Torrent.doneDateSortKey  { return by { $0.doneDateSortKey } }
+        if kp == \Torrent.downloadedSortKey { return by { $0.downloadedSortKey } }
+        if kp == \Torrent.uploadedSortKey  { return by { $0.uploadedSortKey } }
+        if kp == \Torrent.remainingSortKey { return by { $0.remainingSortKey } }
+        // Folder / labels: natural sorting, like the name.
+        if kp == \Torrent.folderText || kp == \Torrent.labelsText {
+            let text: (Torrent) -> String = kp == \Torrent.folderText ? { $0.folderText } : { $0.labelsText }
+            return items.sorted {
+                let r = text($0).localizedStandardCompare(text($1))
+                return asc ? r == .orderedAscending : r == .orderedDescending
+            }
+        }
 
         return items.sorted(using: order) // unknown key → correct, slow fallback
     }
