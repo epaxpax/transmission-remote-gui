@@ -15,7 +15,7 @@ set -euo pipefail
 APP_NAME="Transmission Remote GUI"   # displayed name + .app filename (with spaces)
 PRODUCT="TransmissionRemoteGUI"      # SwiftPM target + binary filename (no spaces)
 BUNDLE_ID="io.github.epaxpax.TransmissionRemoteGUI"   # app identity (reverse-DNS)
-VERSION="0.1.6"        # CFBundleShortVersionString
+VERSION="0.1.7"        # CFBundleShortVersionString
 BUILD="1"              # CFBundleVersion (build number)
 MIN_MACOS="14.0"
 
