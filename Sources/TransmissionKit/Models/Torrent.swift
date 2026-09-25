@@ -177,6 +177,16 @@ public extension Torrent {
     /// Download folder as shown in the list (missing = empty, sorts first ascending).
     var folderText: String { downloadDir ?? "" }
 
+    /// Distinct announce hosts, in tracker order. Empty until the model has merged the
+    /// separately fetched `trackers` into the list torrent (see `TorrentFields.trackers`).
+    var trackerHosts: [String] {
+        var seen = Set<String>()
+        return (trackers ?? []).compactMap(\.announceHost).filter { seen.insert($0).inserted }
+    }
+
+    /// Tracker hosts as one comma-separated string (for display and sorting).
+    var trackerText: String { trackerHosts.joined(separator: ", ") }
+
     /// Labels as one comma-separated string (for display and sorting).
     var labelsText: String { (labels ?? []).joined(separator: ", ") }
 

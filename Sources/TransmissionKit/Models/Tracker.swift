@@ -43,10 +43,16 @@ public struct Tracker: Codable, Hashable, Sendable {
     /// and the dry run reported "nothing would change" — indistinguishable from a rule
     /// that legitimately matches nothing. Since `RuleMatcher` substring-matches over
     /// this array, an extra candidate can only ever make a rule more permissive.
+    /// The host parsed out of the announce URL ("tracker.example.org"), as the UI shows it.
+    public var announceHost: String? {
+        guard let announce, let host = URLComponents(string: announce)?.host, !host.isEmpty else { return nil }
+        return host
+    }
+
     public var matchHosts: [String] {
         var out: [String] = []
         if let sitename, !sitename.isEmpty { out.append(sitename) }
-        if let announce, let host = URLComponents(string: announce)?.host, !host.isEmpty { out.append(host) }
+        if let host = announceHost { out.append(host) }
         return out
     }
 }

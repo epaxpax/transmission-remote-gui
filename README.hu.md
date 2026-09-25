@@ -13,8 +13,8 @@ tiszta lapról írt macOS-újragondolása.
 ## Funkciók
 
 - Torrent-lista oszlopokkal (név, állapot, haladás, méret, ↓/↑ ráta, ETA, arány, peerek, hozzáadva, **utolsó aktivitás**), gyors natív rendezéssel
-- **Testreszabható oszlopok**: jobb klikk a lista fejlécén → oszlopok ki/be — plusz oszlopok: befejezve, hátralévő, letöltve, feltöltve, letöltési mappa, címkék; a sorrend, a szélesség és a láthatóság megmarad, az *Alapértelmezett oszlopok* visszaállítja
-- Sidebar szűrők + darabszámok (Összes / Letöltés alatt / Kész / Aktív / Inaktív / Leállítva / Hibás), plusz **címke (kategória) szűrők**
+- **Testreszabható oszlopok**: jobb klikk a lista fejlécén → oszlopok ki/be — plusz oszlopok: befejezve, hátralévő, letöltve, feltöltve, letöltési mappa, tracker, címkék; a sorrend, a szélesség és a láthatóság megmarad, az *Alapértelmezett oszlopok* visszaállítja
+- Sidebar szűrők + darabszámok (Összes / Letöltés alatt / Kész / Aktív / Inaktív / Leállítva / Hibás), plusz **tracker**, **letöltési mappa** és **címke (kategória)** szűrők darabszámmal — egymással és az állapotszűrővel is kombinálhatók; újra kattintva kikapcsolnak
 - Keresés a listában
 - Torrent hozzáadása **magnet linkből / URL-ből**, **`.torrent` fájlból**, valamint **drag & drop**pal az ablakra
 - **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
@@ -102,6 +102,7 @@ ellen, Accessibility-n, valódi egéreseményeken és képernyőképeken át:
 python3 Scripts/uitest/test_open_with.py       # Megnyitás / magnet linkek
 python3 Scripts/uitest/test_context_menu.py    # sor-menü minden oszlopon
 python3 Scripts/uitest/test_columns.py         # fejléc-menü: oszlopok ki/be, megmaradás, visszaállítás
+python3 Scripts/uitest/test_filters.py         # sidebar tracker- / mappaszűrők
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # 3.00 helyett Transmission 4.x ellen
 ```
