@@ -35,7 +35,7 @@ final class AppModel {
     private(set) var folderGroups: [SidebarGroups.Entry] = []
     private(set) var labelGroups: [SidebarGroups.Entry] = []
     /// Trackers per torrent id, fetched apart from the list poll (see `mergeTrackers`).
-    private var trackersByID: [Int: [Tracker]] = [:]
+    private var trackersByID: [Int: (trackers: [Tracker], stats: [TrackerStat])] = [:]
     private var trackersFetchedAt: Date?
     /// Trackers rarely change, so the full tracker fetch runs this seldom; new torrents
     /// get theirs on the very next poll.
@@ -342,7 +342,7 @@ final class AppModel {
     }
 
     /// Copies each torrent's trackers onto the list torrents. The list poll leaves them out
-    /// (`TorrentFields.trackers`), so they come from a separate `id + trackers` query: only
+    /// (`TorrentFields.trackers`), so they come from a separate `TorrentFields.trackers` query: only
     /// for ids not seen yet, plus a full refresh every `trackerRefreshInterval`. A failed
     /// query is simply retried on the next poll — the filter is never worth a failed refresh.
     private func mergeTrackers(into listed: [Torrent], client: RPCClient) async -> [Torrent] {
@@ -352,11 +352,15 @@ final class AppModel {
            let rows = try? await client.torrentGet(fields: TorrentFields.trackers,
                                                    ids: stale ? .all : .ids(missing.map { .id($0) })) {
             if stale { trackersByID = [:]; trackersFetchedAt = Date() }
-            for row in rows { trackersByID[row.id] = row.trackers ?? [] }
+            for row in rows { trackersByID[row.id] = (row.trackers ?? [], row.trackerStats ?? []) }
         }
         let present = Set(listed.map(\.id))
         if trackersByID.count > present.count { trackersByID = trackersByID.filter { present.contains($0.key) } }
-        return listed.map { var t = $0; t.trackers = trackersByID[t.id]; return t }
+        return listed.map {
+            var t = $0
+            if let cached = trackersByID[t.id] { t.trackers = cached.trackers; t.trackerStats = cached.stats }
+            return t
+        }
     }
 
     private func loadSessionInfo() async {

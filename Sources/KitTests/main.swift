@@ -189,6 +189,22 @@ await t.test("Folder titles: last component, full path only where it would be am
     try t.expectEqual(titles["/"], "/")
 }
 
+await t.test("Seeds / Leechers: connected peers + the largest tracker-reported swarm count") {
+    var t1 = Torrent(id: 1); t1.peersSendingToUs = 3; t1.peersGettingFromUs = 2
+    try t.expectEqual(t1.seedsText, "3")            // tracker stats not fetched yet
+    try t.expectEqual(t1.seedsSortKey, -1)
+    t1.trackerStats = [TrackerStat(seederCount: 120, leecherCount: -1), TrackerStat(seederCount: 80, leecherCount: 40),
+                       TrackerStat(seederCount: -1, leecherCount: nil)]
+    try t.expectEqual(t1.seedsText, "3 (120)")
+    try t.expectEqual(t1.leechersText, "2 (40)")
+    try t.expectEqual(t1.seedsSortKey, 120)
+    t1.trackerStats = [TrackerStat(seederCount: -1, leecherCount: -1)]   // tracker has not scraped yet
+    try t.expectEqual(t1.seedsText, "3")
+    let sorted = TorrentSort.apply([t1, { var x = Torrent(id: 2); x.trackerStats = [TrackerStat(seederCount: 5)]; return x }()],
+                                   [KeyPathComparator(\Torrent.seedsSortKey, order: .reverse)])
+    try t.expectEqual(sorted.map(\.id), [2, 1])
+}
+
 await t.test("Label groups count torrents per label") {
     let groups = SidebarGroups.labels([mkTracked(1, labels: ["hd", "tv"]), mkTracked(2, labels: ["tv"]), mkTracked(3)])
     try t.expectEqual(groups, [.init(value: "hd", count: 1), .init(value: "tv", count: 2)])

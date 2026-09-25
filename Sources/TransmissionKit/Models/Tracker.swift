@@ -12,6 +12,12 @@ public struct TrackerStat: Codable, Hashable, Sendable, Identifiable {
     public var leecherCount: Int?
     public var nextAnnounceTime: Int?
 
+    public init(host: String? = nil, announce: String? = nil, tier: Int? = nil,
+                seederCount: Int? = nil, leecherCount: Int? = nil) {
+        self.host = host; self.announce = announce; self.tier = tier
+        self.seederCount = seederCount; self.leecherCount = leecherCount
+    }
+
     public var displayHost: String {
         host ?? announce ?? "—"
     }

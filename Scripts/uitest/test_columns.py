@@ -13,7 +13,7 @@ T = "table 1 of scroll area 1 of group 1 of splitter group 1 of group 2 of split
 SCROLL = "scroll area 1 of group 1 of splitter group 1 of group 2 of splitter group 1 of group 1 of window 1"
 DEFAULT = ["name", "status", "progress", "size", "down", "up", "eta", "ratio", "peers", "added", "activity"]
 MENU = ["Name", "Status", "Done", "Size", "Download speed", "Upload speed", "ETA", "Ratio", "Peers", "Added",
-        "Last activity", "Completed on", "Remaining", "Downloaded", "Uploaded", "Download folder", "Labels",
+        "Last activity", "Completed on", "Remaining", "Downloaded", "Uploaded", "Download folder", "Seeds", "Leechers", "Tracker", "Labels",
         "-", "Default Columns"]
 KEY_REMAINING = [15, 14, 46, 36]   # type-select "rem", Return
 KEY_DEFAULTS = [2, 14, 3, 36]      # type-select "def", Return

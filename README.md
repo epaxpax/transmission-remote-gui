@@ -20,7 +20,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 ## Features
 
 - Torrent list with columns (name, status, progress, size, ↓/↑ rate, ETA, ratio, peers, added, **last activity**) and fast native sorting
-- **Customizable columns**: right-click the list header to show/hide columns — extra ones: completed on, remaining, downloaded, uploaded, download folder, tracker, labels; order, widths and visibility are remembered, *Default Columns* resets them
+- **Customizable columns**: right-click the list header to show/hide columns — extra ones: completed on, remaining, downloaded, uploaded, download folder, **seeds / leechers** (connected, and the swarm size the trackers report — e.g. `3 (120)`), tracker, labels; order, widths and visibility are remembered, *Default Columns* resets them
 - Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **tracker**, **download folder** and **label (category)** filters with counts — they combine with each other and the status filter; click again to clear
 - Search within the list
 - Add torrents via **magnet link / URL**, **`.torrent` file**, or **drag & drop** onto the window
