@@ -30,6 +30,16 @@ final class AppModel {
     private(set) var displayedTorrents: [Torrent] = []
     /// Per-filter counts for the sidebar — populated when torrents change.
     private(set) var filterCounts: [TorrentFilter: Int] = [:]
+    /// Sidebar tracker / folder / label groups with counts — populated when torrents change.
+    private(set) var trackerGroups: [SidebarGroups.Entry] = []
+    private(set) var folderGroups: [SidebarGroups.Entry] = []
+    private(set) var labelGroups: [SidebarGroups.Entry] = []
+    /// Trackers per torrent id, fetched apart from the list poll (see `mergeTrackers`).
+    private var trackersByID: [Int: [Tracker]] = [:]
+    private var trackersFetchedAt: Date?
+    /// Trackers rarely change, so the full tracker fetch runs this seldom; new torrents
+    /// get theirs on the very next poll.
+    private static let trackerRefreshInterval: TimeInterval = 300
     /// The selected torrent with extended fields (files/peers/trackers) — for the detail view.
     private(set) var detailTorrent: Torrent?
     private(set) var sessionInfo: SessionInfo?
@@ -42,6 +52,10 @@ final class AppModel {
     var searchText: String = "" { didSet { recomputeDisplayed() } }
     /// Optional label (category) filter, chosen in the sidebar. nil = no label filter.
     var labelFilter: String? { didSet { recomputeDisplayed() } }
+    /// Optional tracker-host filter (e.g. "tracker.example.org"). nil = no tracker filter.
+    var trackerFilter: String? { didSet { recomputeDisplayed() } }
+    /// Optional download-folder filter (a `SidebarGroups.folderKey`). nil = no folder filter.
+    var folderFilter: String? { didSet { recomputeDisplayed() } }
     var selection: Set<Int> = []
 
     /// Last failed action's message, shown as an alert and cleared when dismissed.
@@ -196,6 +210,8 @@ final class AppModel {
         let filtered = torrents.filter { torrent in
             guard filter.matches(torrent) else { return false }
             if let label = labelFilter, !(torrent.labels ?? []).contains(label) { return false }
+            if let tracker = trackerFilter, !torrent.trackerHosts.contains(tracker) { return false }
+            if let folder = folderFilter, !SidebarGroups.matchesFolder(torrent, folder) { return false }
             guard !query.isEmpty else { return true }
             return torrent.displayName.lowercased().contains(query)
         }
@@ -210,6 +226,9 @@ final class AppModel {
             counts[f] = torrents.reduce(0) { $0 + (f.matches($1) ? 1 : 0) }
         }
         filterCounts = counts
+        trackerGroups = SidebarGroups.trackers(torrents)
+        folderGroups = SidebarGroups.folders(torrents)
+        labelGroups = SidebarGroups.labels(torrents)
     }
 
     /// Number of peers (clients) currently connected across all torrents — relative to the
@@ -232,6 +251,9 @@ final class AppModel {
 
     func connect(to server: ServerConfig) {
         if server.id != incomingServerID { _ = incoming.drain() }
+        if server.id != selectedServerID {
+            labelFilter = nil; trackerFilter = nil; folderFilter = nil   // values of the old server
+        }
         selectedServerID = server.id
         stopPolling()
         connection = .connecting
@@ -239,6 +261,8 @@ final class AppModel {
         completedIDs = []
         completedSeeded = false   // on a new server, do not notify about already-finished torrents
         speedHistory = []
+        trackersByID = [:]        // another server's torrent ids mean other torrents
+        trackersFetchedAt = nil
         rulesSkipUntil = nil      // a different (or repaired) server deserves a fresh attempt
         client = RPCClient(config: server, session: server.makeSession())
         startPolling(interval: server.refreshInterval)
@@ -302,7 +326,8 @@ final class AppModel {
         do {
             async let torrentsResult = client.torrentGet()
             async let statsResult = client.sessionStats()
-            let (fetched, stats) = try await (torrentsResult, statsResult)
+            let (listed, stats) = try await (torrentsResult, statsResult)
+            let fetched = await mergeTrackers(into: listed, client: client)
             notifyNewlyFinished(fetched)
             self.torrents = fetched   // sorting is done by the displayedTorrents cache (per sortOrder)
             self.sessionStats = stats
@@ -314,6 +339,24 @@ final class AppModel {
         } catch {
             self.connection = .failed(locError(error))
         }
+    }
+
+    /// Copies each torrent's trackers onto the list torrents. The list poll leaves them out
+    /// (`TorrentFields.trackers`), so they come from a separate `id + trackers` query: only
+    /// for ids not seen yet, plus a full refresh every `trackerRefreshInterval`. A failed
+    /// query is simply retried on the next poll — the filter is never worth a failed refresh.
+    private func mergeTrackers(into listed: [Torrent], client: RPCClient) async -> [Torrent] {
+        let stale = trackersFetchedAt.map { Date().timeIntervalSince($0) > Self.trackerRefreshInterval } ?? true
+        let missing = stale ? [] : listed.map(\.id).filter { trackersByID[$0] == nil }
+        if stale || !missing.isEmpty,
+           let rows = try? await client.torrentGet(fields: TorrentFields.trackers,
+                                                   ids: stale ? .all : .ids(missing.map { .id($0) })) {
+            if stale { trackersByID = [:]; trackersFetchedAt = Date() }
+            for row in rows { trackersByID[row.id] = row.trackers ?? [] }
+        }
+        let present = Set(listed.map(\.id))
+        if trackersByID.count > present.count { trackersByID = trackersByID.filter { present.contains($0.key) } }
+        return listed.map { var t = $0; t.trackers = trackersByID[t.id]; return t }
     }
 
     private func loadSessionInfo() async {
@@ -548,11 +591,6 @@ final class AppModel {
             args.labels = labels
             try await $0.torrentSet(args)
         }
-    }
-
-    /// All distinct labels currently in use (sorted) — for the sidebar filter list.
-    var allLabels: [String] {
-        Set(torrents.flatMap { $0.labels ?? [] }).sorted()
     }
 
     func add(filename: String, paused: Bool = false) async {

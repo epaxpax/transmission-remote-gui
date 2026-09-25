@@ -39,9 +39,10 @@ public enum TorrentSort {
         if kp == \Torrent.downloadedSortKey { return by { $0.downloadedSortKey } }
         if kp == \Torrent.uploadedSortKey  { return by { $0.uploadedSortKey } }
         if kp == \Torrent.remainingSortKey { return by { $0.remainingSortKey } }
-        // Folder / labels: natural sorting, like the name.
-        if kp == \Torrent.folderText || kp == \Torrent.labelsText {
-            let text: (Torrent) -> String = kp == \Torrent.folderText ? { $0.folderText } : { $0.labelsText }
+        // Folder / labels / tracker: natural sorting, like the name.
+        let textKeys: [KeyPath<Torrent, String>] = [\.folderText, \.labelsText, \.trackerText]
+        if let textKey = textKeys.first(where: { $0 == kp }) {
+            let text: (Torrent) -> String = { $0[keyPath: textKey] }
             return items.sorted {
                 let r = text($0).localizedStandardCompare(text($1))
                 return asc ? r == .orderedAscending : r == .orderedDescending

@@ -148,6 +148,52 @@ await t.test("Optional-column sort keys default to 0 / empty for missing fields"
     try t.expectEqual(full.folderText, "/data/x")
 }
 
+print("\nSidebarGroups (tracker / folder / label filters)")
+
+func mkTracked(_ id: Int, dir: String? = nil, announces: [String] = [], labels: [String]? = nil) -> Torrent {
+    var t = Torrent(id: id); t.downloadDir = dir; t.labels = labels
+    t.trackers = announces.map { Tracker(announce: $0) }
+    return t
+}
+
+await t.test("trackerHosts: distinct announce hosts in tracker order, invalid URLs skipped") {
+    let t1 = mkTracked(1, announces: ["udp://b.example:80/announce", "http://a.example/announce",
+                                      "https://b.example/x", "not a url"])
+    try t.expectEqual(t1.trackerHosts, ["b.example", "a.example"])
+    try t.expectEqual(t1.trackerText, "b.example, a.example")
+    try t.expectEqual(Torrent(id: 2).trackerHosts, [])
+}
+
+await t.test("Tracker groups count each torrent once per host, sorted naturally") {
+    let groups = SidebarGroups.trackers([
+        mkTracked(1, announces: ["http://t10.example/a", "udp://t10.example:1/a"]),
+        mkTracked(2, announces: ["http://t9.example/a", "http://t10.example/a"]),
+        mkTracked(3),
+    ])
+    try t.expectEqual(groups, [.init(value: "t9.example", count: 1), .init(value: "t10.example", count: 2)])
+}
+
+await t.test("Folder groups merge trailing slashes and skip empty paths") {
+    let groups = SidebarGroups.folders([mkTracked(1, dir: "/data/tv/"), mkTracked(2, dir: "/data/tv"),
+                                        mkTracked(3, dir: ""), mkTracked(4, dir: "/")])
+    try t.expectEqual(groups, [.init(value: "/", count: 1), .init(value: "/data/tv", count: 2)])
+    try t.expect(SidebarGroups.matchesFolder(mkTracked(5, dir: "/data/tv/"), "/data/tv"), "trailing slash matches")
+    try t.expect(!SidebarGroups.matchesFolder(mkTracked(6, dir: "/data/tv2"), "/data/tv"), "no prefix match")
+}
+
+await t.test("Folder titles: last component, full path only where it would be ambiguous") {
+    let titles = SidebarGroups.folderTitles(["/a/tv", "/b/tv", "/a/movies", "/"])
+    try t.expectEqual(titles["/a/tv"], "/a/tv")
+    try t.expectEqual(titles["/b/tv"], "/b/tv")
+    try t.expectEqual(titles["/a/movies"], "movies")
+    try t.expectEqual(titles["/"], "/")
+}
+
+await t.test("Label groups count torrents per label") {
+    let groups = SidebarGroups.labels([mkTracked(1, labels: ["hd", "tv"]), mkTracked(2, labels: ["tv"]), mkTracked(3)])
+    try t.expectEqual(groups, [.init(value: "hd", count: 1), .init(value: "tv", count: 2)])
+}
+
 print("\nTorrentSort (fast sorting)")
 
 await t.test("Folder and uploaded columns sort through TorrentSort") {
