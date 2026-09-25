@@ -167,6 +167,19 @@ public extension Torrent {
     /// Last activity for sorting (never active = 0, goes to the end of the list descending).
     var activityDateSortKey: Int { activityDate ?? 0 }
 
+    /// Completion date for sorting (not finished yet = 0).
+    var doneDateSortKey: Int { doneDate ?? 0 }
+
+    var downloadedSortKey: Int { downloadedEver ?? 0 }
+    var uploadedSortKey: Int { uploadedEver ?? 0 }
+    var remainingSortKey: Int { leftUntilDone ?? 0 }
+
+    /// Download folder as shown in the list (missing = empty, sorts first ascending).
+    var folderText: String { downloadDir ?? "" }
+
+    /// Labels as one comma-separated string (for display and sorting).
+    var labelsText: String { (labels ?? []).joined(separator: ", ") }
+
     /// ETA for sorting: unknown/infinite (`< 0`) should go to the end of the list.
     var etaSortKey: Int {
         let e = eta ?? -1

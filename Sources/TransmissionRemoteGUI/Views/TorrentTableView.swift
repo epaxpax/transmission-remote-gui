@@ -25,22 +25,28 @@ struct TorrentTableView: NSViewRepresentable {
     struct ColumnSpec {
         let id: String
         let title: String
+        /// Title in the header's column menu, when the header itself is too terse (↓ / ↑).
+        let menuTitle: String
         let width: CGFloat
         let minWidth: CGFloat
         let alignment: NSTextAlignment
         let monospaced: Bool
         let isProgress: Bool
+        /// Shown on first launch / after "Default Columns"; the rest are opt-in via the header menu.
+        let defaultVisible: Bool
         let text: (Torrent) -> String
         let color: (Torrent) -> NSColor?
         let makeComparator: (_ ascending: Bool) -> KeyPathComparator<Torrent>
 
-        init(id: String, title: String, width: CGFloat, minWidth: CGFloat = 40,
+        init(id: String, title: String, menuTitle: String? = nil, width: CGFloat, minWidth: CGFloat = 40,
              alignment: NSTextAlignment = .left, monospaced: Bool = false, isProgress: Bool = false,
+             defaultVisible: Bool = true,
              text: @escaping (Torrent) -> String = { _ in "" },
              color: @escaping (Torrent) -> NSColor? = { _ in nil },
              comparator: @escaping (_ ascending: Bool) -> KeyPathComparator<Torrent>) {
-            self.id = id; self.title = title; self.width = width; self.minWidth = minWidth
+            self.id = id; self.title = title; self.menuTitle = menuTitle ?? title; self.width = width; self.minWidth = minWidth
             self.alignment = alignment; self.monospaced = monospaced; self.isProgress = isProgress
+            self.defaultVisible = defaultVisible
             self.text = text; self.color = color; self.makeComparator = comparator
         }
     }
@@ -59,11 +65,11 @@ struct TorrentTableView: NSViewRepresentable {
         ColumnSpec(id: "size", title: "Méret", width: 78, alignment: .right, monospaced: true,
                    text: { Format.size($0.sizeSortKey) },
                    comparator: { KeyPathComparator(\Torrent.sizeSortKey, order: $0 ? .forward : .reverse) }),
-        ColumnSpec(id: "down", title: "↓", width: 78, alignment: .right, monospaced: true,
+        ColumnSpec(id: "down", title: "↓", menuTitle: "Letöltési sebesség", width: 78, alignment: .right, monospaced: true,
                    text: { Format.rate($0.downloadRate) },
                    color: { _ in .systemGreen },
                    comparator: { KeyPathComparator(\Torrent.downloadRate, order: $0 ? .forward : .reverse) }),
-        ColumnSpec(id: "up", title: "↑", width: 78, alignment: .right, monospaced: true,
+        ColumnSpec(id: "up", title: "↑", menuTitle: "Feltöltési sebesség", width: 78, alignment: .right, monospaced: true,
                    text: { Format.rate($0.uploadRate) },
                    color: { _ in .systemBlue },
                    comparator: { KeyPathComparator(\Torrent.uploadRate, order: $0 ? .forward : .reverse) }),
@@ -84,7 +90,32 @@ struct TorrentTableView: NSViewRepresentable {
                    text: { $0.activityDateValue.map(dateFormatter.string(from:)) ?? "—" },
                    color: { _ in .secondaryLabelColor },
                    comparator: { KeyPathComparator(\Torrent.activityDateSortKey, order: $0 ? .forward : .reverse) }),
+        // Optional columns — hidden until enabled from the header's right-click menu.
+        ColumnSpec(id: "done", title: "Befejezve", width: 130, minWidth: 90, monospaced: true, defaultVisible: false,
+                   text: { $0.doneDateValue.map(dateFormatter.string(from:)) ?? "—" },
+                   color: { _ in .secondaryLabelColor },
+                   comparator: { KeyPathComparator(\Torrent.doneDateSortKey, order: $0 ? .forward : .reverse) }),
+        ColumnSpec(id: "remaining", title: "Hátralévő", width: 78, alignment: .right, monospaced: true, defaultVisible: false,
+                   text: { Format.size($0.remainingSortKey) },
+                   comparator: { KeyPathComparator(\Torrent.remainingSortKey, order: $0 ? .forward : .reverse) }),
+        ColumnSpec(id: "downloaded", title: "Letöltve", width: 78, alignment: .right, monospaced: true, defaultVisible: false,
+                   text: { Format.size($0.downloadedSortKey) },
+                   comparator: { KeyPathComparator(\Torrent.downloadedSortKey, order: $0 ? .forward : .reverse) }),
+        ColumnSpec(id: "uploaded", title: "Feltöltve", width: 78, alignment: .right, monospaced: true, defaultVisible: false,
+                   text: { Format.size($0.uploadedSortKey) },
+                   comparator: { KeyPathComparator(\Torrent.uploadedSortKey, order: $0 ? .forward : .reverse) }),
+        ColumnSpec(id: "folder", title: "Letöltési mappa", width: 180, minWidth: 80, defaultVisible: false,
+                   text: { $0.folderText },
+                   color: { _ in .secondaryLabelColor },
+                   comparator: { KeyPathComparator(\Torrent.folderText, order: $0 ? .forward : .reverse) }),
+        ColumnSpec(id: "labels", title: "Címkék", width: 120, minWidth: 60, defaultVisible: false,
+                   text: { $0.labelsText },
+                   color: { _ in .secondaryLabelColor },
+                   comparator: { KeyPathComparator(\Torrent.labelsText, order: $0 ? .forward : .reverse) }),
     ]
+
+    /// UserDefaults autosave name: AppKit persists column order, widths and visibility under it.
+    static let columnAutosaveName = "TorrentTable"
 
     static let columnsByID: [String: ColumnSpec] = Dictionary(uniqueKeysWithValues: columns.map { ($0.id, $0) })
 
@@ -113,8 +144,18 @@ struct TorrentTableView: NSViewRepresentable {
             col.width = spec.width
             col.minWidth = spec.minWidth
             col.sortDescriptorPrototype = NSSortDescriptor(key: spec.id, ascending: true)
+            col.isHidden = !spec.defaultVisible
             table.addTableColumn(col)
         }
+        // Set AFTER the columns exist: this restores the user's saved order/widths/visibility.
+        table.autosaveName = Self.columnAutosaveName
+        table.autosaveTableColumns = true
+
+        // Right-click on the header: choose the visible columns (like Finder / Transmission).
+        let headerMenu = NSMenu()
+        headerMenu.autoenablesItems = false   // keeps the always-shown name column disabled
+        headerMenu.delegate = context.coordinator
+        table.headerView?.menu = headerMenu
 
         table.delegate = context.coordinator
         table.dataSource = context.coordinator
@@ -150,7 +191,7 @@ struct TorrentTableView: NSViewRepresentable {
     // MARK: Coordinator
 
     @MainActor
-    final class Coordinator: NSObject, NSTableViewDelegate, NSTableViewDataSource {
+    final class Coordinator: NSObject, NSTableViewDelegate, NSTableViewDataSource, NSMenuDelegate {
         var parent: TorrentTableView
         weak var tableView: NSTableView?
         var data: [Torrent] = []
@@ -240,6 +281,63 @@ struct TorrentTableView: NSViewRepresentable {
                 if let spec = TorrentTableView.columnsByID[col.identifier.rawValue] {
                     col.title = loc(spec.title)
                 }
+            }
+        }
+
+        // MARK: Header menu — column visibility
+
+        /// Rebuilt on every open, so titles follow the language and checkmarks the current state.
+        func menuNeedsUpdate(_ menu: NSMenu) {
+            menu.removeAllItems()
+            guard let tv = tableView else { return }
+            for col in tv.tableColumns {
+                guard let spec = TorrentTableView.columnsByID[col.identifier.rawValue] else { continue }
+                let item = NSMenuItem(title: loc(spec.menuTitle), action: #selector(toggleColumn(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = spec.id
+                item.state = col.isHidden ? .off : .on
+                item.isEnabled = spec.id != "name"   // the name column is always shown
+                menu.addItem(item)
+            }
+            menu.addItem(.separator())
+            let reset = NSMenuItem(title: loc("Alapértelmezett oszlopok"), action: #selector(resetColumns), keyEquivalent: "")
+            reset.target = self
+            menu.addItem(reset)
+        }
+
+        @objc func toggleColumn(_ sender: NSMenuItem) {
+            guard let tv = tableView, let id = sender.representedObject as? String, id != "name",
+                  let col = tv.tableColumn(withIdentifier: .init(id)) else { return }
+            col.isHidden.toggle()
+            if !col.isHidden { makeRoom(for: col, in: tv) }
+        }
+
+        /// Restores the original column set, order and widths.
+        @objc func resetColumns() {
+            guard let tv = tableView else { return }
+            for (index, spec) in TorrentTableView.columns.enumerated() {
+                guard let from = tv.tableColumns.firstIndex(where: { $0.identifier.rawValue == spec.id }) else { continue }
+                if from != index { tv.moveColumn(from, toColumn: index) }
+                let col = tv.tableColumns[index]
+                col.isHidden = !spec.defaultVisible
+                col.width = spec.width
+            }
+            if let name = tv.tableColumn(withIdentifier: .init("name")) { makeRoom(for: nil, in: tv, name: name) }
+        }
+
+        /// Only the name column autoresizes, so a newly shown column would push the table into a
+        /// horizontal scroll. Shrink the name column (down to its minimum) to fit it instead.
+        private func makeRoom(for column: NSTableColumn?, in tv: NSTableView,
+                              name: NSTableColumn? = nil) {
+            guard let name = name ?? tv.tableColumn(withIdentifier: .init("name")),
+                  let clip = tv.enclosingScrollView?.contentView else { return }
+            let spacing = tv.intercellSpacing.width
+            let used = tv.tableColumns.filter { !$0.isHidden }.reduce(0) { $0 + $1.width + spacing }
+            let overflow = used - clip.bounds.width
+            if overflow > 0 {
+                name.width = max(name.minWidth, name.width - overflow)
+            } else if column == nil {
+                name.width += -overflow   // after a reset: let the name column take the free space
             }
         }
 

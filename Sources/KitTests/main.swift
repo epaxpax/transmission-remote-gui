@@ -137,7 +137,27 @@ await t.test("Sorting by addedDateSortKey puts the newest first (reverse)") {
     try t.expectEqual(sorted.map(\.id), [2, 1])
 }
 
+await t.test("Optional-column sort keys default to 0 / empty for missing fields") {
+    let empty = Torrent(id: 1)
+    try t.expectEqual(empty.doneDateSortKey, 0)
+    try t.expectEqual(empty.remainingSortKey, 0)
+    try t.expectEqual(empty.folderText, "")
+    try t.expectEqual(empty.labelsText, "")
+    var full = Torrent(id: 2); full.labels = ["movies", "hd"]; full.downloadDir = "/data/x"
+    try t.expectEqual(full.labelsText, "movies, hd")
+    try t.expectEqual(full.folderText, "/data/x")
+}
+
 print("\nTorrentSort (fast sorting)")
+
+await t.test("Folder and uploaded columns sort through TorrentSort") {
+    var a = Torrent(id: 1); a.downloadDir = "/data/tv10"; a.uploadedEver = 5
+    var b = Torrent(id: 2); b.downloadDir = "/data/tv9"; b.uploadedEver = 50
+    let byFolder = TorrentSort.apply([a, b], [KeyPathComparator(\Torrent.folderText, order: .forward)])
+    try t.expectEqual(byFolder.map(\.id), [2, 1])   // natural: tv9 < tv10
+    let byUp = TorrentSort.apply([a, b], [KeyPathComparator(\Torrent.uploadedSortKey, order: .reverse)])
+    try t.expectEqual(byUp.map(\.id), [2, 1])
+}
 
 func mkTorrent(_ id: Int, name: String, size: Int? = nil, added: Int? = nil, eta: Int? = nil) -> Torrent {
     var t = Torrent(id: id); t.name = name; t.sizeWhenDone = size; t.addedDate = added; t.eta = eta; return t
