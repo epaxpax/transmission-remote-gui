@@ -41,8 +41,8 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Menu bar (tray) icon** with ↓/↑ speeds and a live graph; the **Dock icon can be hidden** (app lives in the menu bar only)
 - UI zoom (⌘+ / ⌘− / ⌘0), automatic refresh with configurable interval
 - **Bilingual UI**: English and Hungarian, switchable at runtime (Settings → General)
-- **Update check**: once a day (and from the app menu: *Check for Updates…*) — a new release shows in the sidebar, with the `brew upgrade` command for Homebrew installs; *Skip This Version* is remembered
-- **Opt-in, anonymous usage statistics** — off unless you say yes; see [Privacy](https://github.com/epaxpax/transmission-remote-gui#privacy)
+- **Update check**: once a day (and from the app menu: *Check for Updates…*) — a new release shows as a small link in the sidebar (no pop-ups), with the `brew upgrade` command for Homebrew installs; *Skip This Version* is remembered
+- **Opt-in, anonymous usage statistics** — off unless you switch it on in Settings → General; see [Privacy](https://github.com/epaxpax/transmission-remote-gui#privacy)
 
 ## Torrent rules
 
@@ -56,8 +56,8 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 
 The app talks to your Transmission daemon(s) and, only with your consent or setting, to two services:
 
-- **Update check** (on by default, Settings → General): once a day it asks `api.github.com` for the latest release number. Nothing about you or your torrents is sent.
-- **Anonymous usage statistics** (off by default; asked once, after the first connection): at most one request a day to [GoatCounter](https://www.goatcounter.com/) containing only the **app version, the macOS major version and the daemon's major.minor version**, e.g. `/app/0.1.9/macos-15/tr-4.1`. No identifier, no cookie, no language, no server address, no torrent data. Like any web request it comes from your IP address; GoatCounter derives at most the country from it and does not store the IP. Switch it off any time in Settings → General.
+- **Update check** (on by default, Settings → General): once a day it asks `api.github.com` for the latest release number. Nothing about you or your torrents is sent, and nothing pops up: a newer release is only a small link in the sidebar.
+- **Anonymous usage statistics** (off by default and never asked for in a pop-up; switch it on in Settings → General): at most one request a day to [GoatCounter](https://www.goatcounter.com/) containing only the **app version, the macOS major version and the daemon's major.minor version**, e.g. `/app/0.1.9/macos-15/tr-4.1`. No identifier, no cookie, no language, no server address, no torrent data. Like any web request it comes from your IP address; GoatCounter derives at most the country from it and does not store the IP. Switch it off again any time.
 
 ## Architecture
 

@@ -33,8 +33,8 @@ tiszta lapról írt macOS-újragondolása.
 - **Menüsor (tray) ikon** le/fel sebességgel és élő grafikonnal; a **Dock-ikon elrejthető** (csak a menüsorban él)
 - UI-nagyítás (⌘+ / ⌘− / ⌘0), automatikus, állítható időközű frissítés
 - **Kétnyelvű felület**: angol és magyar, futásidőben váltható (Beállítások → Általános)
-- **Frissítés-ellenőrzés**: naponta egyszer (és az app menüjéből: *Frissítések keresése…*) — az új kiadás megjelenik az oldalsávban, Homebrew-os telepítésnél a `brew upgrade` paranccsal; a *Kihagyom ezt a verziót* megmarad
-- **Bekapcsolható, névtelen használati statisztika** — csak ha igent mondasz; lásd [Adatvédelem](https://github.com/epaxpax/transmission-remote-gui/blob/main/README.hu.md#adatvédelem)
+- **Frissítés-ellenőrzés**: naponta egyszer (és az app menüjéből: *Frissítések keresése…*) — az új kiadás csak egy kis link az oldalsávban (nincs felugró ablak), Homebrew-os telepítésnél a `brew upgrade` paranccsal; a *Kihagyom ezt a verziót* megmarad
+- **Bekapcsolható, névtelen használati statisztika** — csak ha bekapcsolod a Beállítások → Általános fülön; lásd [Adatvédelem](https://github.com/epaxpax/transmission-remote-gui/blob/main/README.hu.md#adatvédelem)
 
 ## Torrent-szabályok
 
@@ -48,8 +48,8 @@ tiszta lapról írt macOS-újragondolása.
 
 Az app a Transmission-daemonnal (daemonokkal) beszél, és csak beleegyezéssel vagy beállítás szerint két szolgáltatással:
 
-- **Frissítés-ellenőrzés** (alapból be, Beállítások → Általános): naponta egyszer lekérdezi az `api.github.com`-tól a legfrissebb kiadás számát. Rólad vagy a torrentjeidről semmi nem megy ki.
-- **Névtelen használati statisztika** (alapból ki; az első csatlakozás után egyszer rákérdez): naponta legfeljebb egy kérés a [GoatCounter](https://www.goatcounter.com/) felé, benne csak az **app verziója, a macOS főverzió és a daemon főverzió.alverziója**, pl. `/app/0.1.9/macos-15/tr-4.1`. Nincs azonosító, süti, nyelvi beállítás, szervercím vagy torrent-adat. Mint minden webes kérés, az IP-címedről érkezik; a GoatCounter legfeljebb az országot számolja ki belőle, az IP-t nem tárolja. Bármikor kikapcsolható: Beállítások → Általános.
+- **Frissítés-ellenőrzés** (alapból be, Beállítások → Általános): naponta egyszer lekérdezi az `api.github.com`-tól a legfrissebb kiadás számát. Rólad vagy a torrentjeidről semmi nem megy ki, és semmi nem ugrik fel: az új kiadás csak egy kis link az oldalsávban.
+- **Névtelen használati statisztika** (alapból ki, és felugró ablakban sem kéri; a Beállítások → Általános fülön kapcsolható be): naponta legfeljebb egy kérés a [GoatCounter](https://www.goatcounter.com/) felé, benne csak az **app verziója, a macOS főverzió és a daemon főverzió.alverziója**, pl. `/app/0.1.9/macos-15/tr-4.1`. Nincs azonosító, süti, nyelvi beállítás, szervercím vagy torrent-adat. Mint minden webes kérés, az IP-címedről érkezik; a GoatCounter legfeljebb az országot számolja ki belőle, az IP-t nem tárolja. Bármikor újra kikapcsolható.
 
 ## Felépítés
 

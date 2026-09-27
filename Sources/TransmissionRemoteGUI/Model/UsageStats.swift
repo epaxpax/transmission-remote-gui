@@ -1,16 +1,15 @@
-import AppKit
+import Foundation
 import Observation
 import TransmissionKit
 
 /// Opt-in, anonymous usage statistics: at most one GoatCounter request a day, carrying only
 /// the app version, the macOS major version and the daemon's major.minor version (see
-/// `UsagePing`). Off until the user says yes — asked once, after the first successful
-/// connection — and switchable in Settings → General.
+/// `UsagePing`). Off by default, and never asked for in a pop-up: the user switches it on
+/// in Settings → General.
 @MainActor @Observable
 final class UsageStats {
     static let shared = UsageStats()
 
-    /// nil = not asked yet.
     static let enabledKey = "usageStatsEnabled"
     private static let lastPingKey = "usageStatsLastPing"
     /// Hidden override for the UI tests: a local server instead of GoatCounter.
@@ -20,22 +19,8 @@ final class UsageStats {
         didSet { UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey) }
     }
 
-    private var hasAnswered: Bool { UserDefaults.standard.object(forKey: Self.enabledKey) != nil }
-
     private init() {
         isEnabled = UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? false
-    }
-
-    /// Asks once, the first time the app is connected (so the user has seen it work).
-    func askConsentIfNeeded() {
-        guard !hasAnswered, UpdateChecker.currentVersion != nil else { return }
-        let alert = NSAlert()
-        alert.messageText = loc("Segítesz névtelen használati statisztikával?")
-        alert.informativeText = loc("Naponta legfeljebb egyszer elküldjük az app verzióját, a macOS főverzióját és a Transmission-daemon verzióját. Semmi mást: nincs azonosító, szervercím vagy torrent-adat. Bármikor kikapcsolható: Beállítások → Általános.")
-        alert.addButton(withTitle: loc("Igen, küldhető"))
-        alert.addButton(withTitle: loc("Nem"))
-        NSApp.activate(ignoringOtherApps: true)
-        isEnabled = alert.runModal() == .alertFirstButtonReturn
     }
 
     /// Called by the maintenance tick while connected; failures are silent (next tick retries).

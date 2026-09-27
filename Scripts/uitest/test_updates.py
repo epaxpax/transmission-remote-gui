@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Update check + opt-in usage statistics, end to end against a LOCAL server (never GitHub or
-GoatCounter): the consent question comes once after connecting, a newer release is offered
-(alert + sidebar button), "Skip This Version" sticks, and the daily ping carries only the
-app / macOS / daemon versions."""
+GoatCounter). Both must stay unobtrusive: an automatic check pops nothing up (a newer release
+is only a sidebar link, the alert opens on click), usage stats are never asked for and send
+nothing until switched on; switched on, the daily ping carries only app / macOS / daemon
+versions, and "Skip This Version" sticks."""
 import http.server, json, os, sys, threading, time, urllib.parse
 sys.path.insert(0, os.path.dirname(__file__))
 import trgui_uitest as ui
@@ -80,21 +81,26 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 ui.setup(APP)
 ui.defaults("appLanguage", "english")
 ui.defaults("updateCheckEnabled", True)
-ui.sh("defaults", "delete", ui.BUNDLE_ID, "usageStatsEnabled", check=False)   # not asked yet
+ui.sh("defaults", "delete", ui.BUNDLE_ID, "usageStatsEnabled", check=False)   # a fresh install
 ui.defaults("updateFeedURL", f"http://127.0.0.1:{PORT}/latest.json")
 ui.defaults("usagePingURL", f"http://127.0.0.1:{PORT}/count")
 try:
-    ui.launch(); ui.assert_isolated()
-
-    press("Yes, Send")                       # consent: asked once, after connecting
-    check("consent stored", read_default("usageStatsEnabled") == "1", read_default("usageStatsEnabled"))
-
-    ui.wait_for(lambda: alert_button("Skip This Version"), timeout=40, what="update alert")
-    check("update feed asked with the app's User-Agent",
-          bool(feeds) and feeds[0].startswith("TransmissionRemoteGUI/"), feeds)
-    press("Later")
+    # 1) Fresh install: stats off and never asked; the update is only a sidebar link.
+    ui.launch(); ui.assert_isolated(); ui.activate()
+    ui.wait_for(lambda: feeds, timeout=30, what="the automatic update check")
+    check("update feed asked with the app's User-Agent", feeds[0].startswith("TransmissionRemoteGUI/"), feeds)
     check("sidebar shows the new version", ui.wait_for(update_button, timeout=10, what="sidebar update button") is not None)
+    time.sleep(8)
+    check("automatic check pops nothing up", alert_button("Skip This Version") is None and alert_button("Later") is None)
+    check("no stats question", alert_button("Yes, Send") is None and alert_button("No") is None)
+    check("stats off by default: no ping", not pings, pings)
 
+    ui.click(update_button()); time.sleep(1)
+    press("Later")
+    check("'Later' keeps the sidebar link", update_button() is not None)
+
+    # 2) The user switched stats on (Settings → General): one ping a day, versions only.
+    ui.quit_app(); ui.defaults("usageStatsEnabled", True); ui.launch(); ui.assert_isolated(); ui.activate()
     ui.wait_for(lambda: pings, timeout=30, what="usage ping")
     q, headers = pings[0]
     path = q.get("p", [""])[0]
@@ -105,14 +111,16 @@ try:
     check("ping sends no cookie", "Cookie" not in headers, headers.get("Cookie"))
     check("ping sends no system language", headers.get("Accept-Language") in (None, "*"), headers.get("Accept-Language"))
 
+    ui.wait_for(update_button, timeout=30, what="sidebar update button after relaunch")
     ui.click(update_button()); time.sleep(1)
     press("Skip This Version")
     check("skipped version stored", read_default("updateSkippedVersion") == FAKE, read_default("updateSkippedVersion"))
-    check("sidebar button gone after skipping", update_button() is None)
+    check("sidebar link gone after skipping", update_button() is None)
 
-    ui.quit_app(); pings.clear(); ui.launch(); ui.assert_isolated(); time.sleep(12)
-    check("no consent question after relaunch", alert_button("Yes, Send") is None)
+    # 3) Same day again: no second ping, and the skipped version stays hidden.
+    ui.quit_app(); pings.clear(); ui.launch(); ui.assert_isolated(); ui.activate(); time.sleep(12)
     check("no second ping on the same day", not pings, pings)
+    check("skipped version not shown again", update_button() is None)
 finally:
     ui.teardown(); server.shutdown()
 print(f"\n{'all update/stats checks OK' if not failed else str(len(failed)) + ' failed'}")

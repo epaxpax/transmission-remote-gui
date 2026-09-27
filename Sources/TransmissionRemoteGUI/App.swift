@@ -163,14 +163,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Once a minute: the update check and the usage ping each decide themselves whether
-    /// they are due (daily), so a tick is only a couple of date comparisons. The consent
-    /// question and the ping wait for a connection — the ping reports the daemon version.
+    /// they are due (daily), so a tick is only a couple of date comparisons. The ping waits
+    /// for a connection, because it reports the daemon version.
     private func startMaintenance() {
         guard Bundle.main.bundleIdentifier != nil else { return }   // not under `swift run`
         Task { @MainActor [model] in
             try? await Task.sleep(for: .seconds(5))
             while !Task.isCancelled {
-                if model.isConnected { UsageStats.shared.askConsentIfNeeded() }
                 await UpdateChecker.shared.checkIfDue()
                 if model.isConnected { await UsageStats.shared.pingIfDue(daemonVersion: model.sessionInfo?.version) }
                 try? await Task.sleep(for: .seconds(60))

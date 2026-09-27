@@ -100,8 +100,14 @@ def ensure_daemon():
 # ---------- app lifecycle ----------
 
 def launch(*open_args):
-    """Launches (or, if running, sends open events to) the isolated app."""
-    sh("open", "--env", f"CFFIXED_USER_HOME={HOME}", "-a", APP, *open_args)
+    """Launches (or, if running, sends open events to) the isolated app. Right after a quit,
+    LaunchServices can still be tearing the old instance down and `open` fails — retry."""
+    for attempt in range(5):
+        r = sh("open", "--env", f"CFFIXED_USER_HOME={HOME}", "-a", APP, *open_args, check=False)
+        if r.returncode == 0:
+            return
+        time.sleep(2)
+    raise RuntimeError(f"open failed: {r.stderr.strip()}")
 
 
 def assert_isolated():
