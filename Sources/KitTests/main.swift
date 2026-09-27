@@ -210,6 +210,55 @@ await t.test("Label groups count torrents per label") {
     try t.expectEqual(groups, [.init(value: "hd", count: 1), .init(value: "tv", count: 2)])
 }
 
+print("\nUpdate check / usage ping")
+
+await t.test("AppVersion compares numerically, component by component") {
+    try t.expect(AppVersion.isNewer("0.1.10", than: "0.1.9"), "0.1.10 > 0.1.9")
+    try t.expect(AppVersion.isNewer("0.2", than: "0.1.9"), "0.2 > 0.1.9")
+    try t.expect(!AppVersion.isNewer("0.1.9", than: "0.1.9"), "equal is not newer")
+    try t.expect(!AppVersion.isNewer("0.1.8", than: "0.1.9"), "older is not newer")
+    try t.expect(!AppVersion.isNewer("0.1.9.0", than: "0.1.9"), "missing component counts as 0")
+    try t.expect(!AppVersion.isNewer("0.1.9-beta", than: "0.1.9"), "pre-release suffix ignored")
+}
+
+await t.test("ReleaseInfo decodes GitHub's latest-release JSON; update offered unless skipped") {
+    let json = #"{"tag_name":"v0.2.0","html_url":"https://github.com/epaxpax/transmission-remote-gui/releases/tag/v0.2.0","draft":false}"#
+    let r = try JSONDecoder().decode(ReleaseInfo.self, from: Data(json.utf8))
+    try t.expectEqual(r.version, "0.2.0")
+    try t.expect(UpdateCheck.shouldOffer(r, current: "0.1.9", skipped: nil), "newer → offer")
+    try t.expect(!UpdateCheck.shouldOffer(r, current: "0.1.9", skipped: "0.2.0"), "skipped → no offer")
+    try t.expect(!UpdateCheck.shouldOffer(r, current: "0.2.0", skipped: nil), "same → no offer")
+}
+
+await t.test("Update check is due once a day") {
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    try t.expect(UpdateCheck.isDue(lastCheck: nil, now: now), "never checked → due")
+    try t.expect(!UpdateCheck.isDue(lastCheck: now.addingTimeInterval(-3600), now: now), "1 h ago → not due")
+    try t.expect(UpdateCheck.isDue(lastCheck: now.addingTimeInterval(-25 * 3600), now: now), "25 h ago → due")
+}
+
+await t.test("Usage ping path carries only versions (daemon as major.minor)") {
+    try t.expectEqual(UsagePing.path(appVersion: "0.1.9", macOSMajor: 15, daemonVersion: "4.1.3 (a1b2c3d)"),
+                      "/app/0.1.9/macos-15/tr-4.1")
+    try t.expectEqual(UsagePing.path(appVersion: "0.1.9", macOSMajor: 14, daemonVersion: "3.00 (bb6b5a062e)"),
+                      "/app/0.1.9/macos-14/tr-3.00")
+    try t.expectEqual(UsagePing.path(appVersion: "0.1.9", macOSMajor: 26, daemonVersion: nil), "/app/0.1.9/macos-26/tr-none")
+    try t.expectEqual(UsagePing.path(appVersion: "0/../x?", macOSMajor: 26, daemonVersion: "garbage"),
+                      "/app/0..x/macos-26/tr-none")
+    let url = UsagePing.url(path: "/app/0.1.9/macos-15/tr-4.1")
+    let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    try t.expectEqual(items.first { $0.name == "p" }?.value, "/app/0.1.9/macos-15/tr-4.1")
+    try t.expectEqual(Set(items.map(\.name)), ["p", "rnd"])   // nothing else leaves the machine
+}
+
+await t.test("Usage ping is due at most once per calendar day") {
+    var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "UTC")!
+    let morning = Date(timeIntervalSince1970: TimeInterval(1_800_000_000 / 86_400 * 86_400 + 8 * 3600))   // 08:00 UTC
+    try t.expect(UsagePing.isDue(lastPing: nil, now: morning, calendar: cal), "never → due")
+    try t.expect(!UsagePing.isDue(lastPing: morning, now: morning.addingTimeInterval(10 * 3600), calendar: cal), "same day → not due")
+    try t.expect(UsagePing.isDue(lastPing: morning, now: morning.addingTimeInterval(17 * 3600), calendar: cal), "next day → due")
+}
+
 print("\nTorrentSort (fast sorting)")
 
 await t.test("Folder and uploaded columns sort through TorrentSort") {

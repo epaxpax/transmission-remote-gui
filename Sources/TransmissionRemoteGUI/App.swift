@@ -24,6 +24,9 @@ struct TransmissionRemoteGUIApp: App {
         // SwiftUI would additionally open a new main window for each one.
         .handlesExternalEvents(matching: [])
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button(loc("Frissítések keresése…")) { Task { await UpdateChecker.shared.check(manual: true) } }
+            }
             CommandGroup(after: .toolbar) {
                 Button(loc("Nagyítás")) { model.zoomIn() }
                     .keyboardShortcut("+", modifiers: .command)
@@ -156,6 +159,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.applicationIconImage = AppIcon.dockIcon()
         NSApp.activate(ignoringOtherApps: true)
         Notifier.requestAuthorization()
+        startMaintenance()
+    }
+
+    /// Once a minute: the update check and the usage ping each decide themselves whether
+    /// they are due (daily), so a tick is only a couple of date comparisons. The consent
+    /// question and the ping wait for a connection — the ping reports the daemon version.
+    private func startMaintenance() {
+        guard Bundle.main.bundleIdentifier != nil else { return }   // not under `swift run`
+        Task { @MainActor [model] in
+            try? await Task.sleep(for: .seconds(5))
+            while !Task.isCancelled {
+                if model.isConnected { UsageStats.shared.askConsentIfNeeded() }
+                await UpdateChecker.shared.checkIfDue()
+                if model.isConnected { await UsageStats.shared.pingIfDue(daemonVersion: model.sessionInfo?.version) }
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
     }
 
     /// Opens the main `WindowGroup` window (set by the menu bar label once it is rendered).

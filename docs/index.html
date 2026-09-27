@@ -106,7 +106,7 @@
         {
           "@type": "Question",
           "name": "Does it collect any data?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No personal data. The app talks only to your own Transmission server. This website uses GoatCounter, a privacy-friendly analytics tool with no cookies." }
+          "acceptedAnswer": { "@type": "Answer", "text": "No personal data. The app talks to your own Transmission server; besides that it only asks GitHub once a day for the latest version number (can be switched off). Anonymous usage statistics (app, macOS and daemon version only) are opt-in and off by default. This website uses GoatCounter, a privacy-friendly analytics tool with no cookies." }
         },
         {
           "@type": "Question",
@@ -221,6 +221,8 @@
   <li><strong>Menu bar (tray) icon</strong> with ↓/↑ speeds and a live graph; the <strong>Dock icon can be hidden</strong> (app lives in the menu bar only)</li>
   <li>UI zoom (⌘+ / ⌘− / ⌘0), automatic refresh with configurable interval</li>
   <li><strong>Bilingual UI</strong>: English and Hungarian, switchable at runtime (Settings → General)</li>
+  <li><strong>Update check</strong>: once a day (and from the app menu: *Check for Updates…*) — a new release shows in the sidebar, with the <code>brew upgrade</code> command for Homebrew installs; *Skip This Version* is remembered</li>
+  <li><strong>Opt-in, anonymous usage statistics</strong> — off unless you say yes; see <a href="https://github.com/epaxpax/transmission-remote-gui#privacy">Privacy</a></li>
   </ul>
   <!-- sync:features:end -->
 
@@ -270,7 +272,7 @@
     <h3>Is it safe? Is the app signed?</h3>
     <p>It is open source (MIT), so every line is auditable. The Homebrew cask installs it without a Gatekeeper prompt; the <code>.dmg</code> is ad-hoc signed (not notarized), so on first launch right-click the app and choose Open.</p>
     <h3>Does it collect any data?</h3>
-    <p>No personal data. The app talks only to your own Transmission server. This website uses GoatCounter — privacy-friendly analytics, no cookies.</p>
+    <p>No personal data. The app talks to your own Transmission server; besides that it only asks GitHub once a day for the latest version number (can be switched off). Anonymous usage statistics — app, macOS and daemon version only — are opt-in and off by default. This website uses GoatCounter — privacy-friendly analytics, no cookies.</p>
     <h3>What macOS version do I need?</h3>
     <p>macOS 14 (Sonoma) or later, on both Apple Silicon and Intel Macs. Sequential streaming additionally needs a Transmission 4.1+ daemon.</p>
   </div>

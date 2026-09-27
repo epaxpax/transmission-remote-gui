@@ -87,6 +87,13 @@ struct SidebarView: View {
     @ViewBuilder
     private var statusBar: some View {
         VStack(alignment: .leading, spacing: 3) {
+            if let release = UpdateChecker.shared.available {
+                Button { UpdateChecker.shared.presentAvailable() } label: {
+                    Label(loc("Új verzió") + ": \(release.version)", systemImage: "arrow.down.app")
+                }
+                .buttonStyle(.link)
+                .accessibilityIdentifier("sidebar.update")
+            }
             Divider()
 
             // Active server + connection state (servers are managed in Settings, ⌘,).

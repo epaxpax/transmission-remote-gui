@@ -41,6 +41,8 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Menu bar (tray) icon** with ↓/↑ speeds and a live graph; the **Dock icon can be hidden** (app lives in the menu bar only)
 - UI zoom (⌘+ / ⌘− / ⌘0), automatic refresh with configurable interval
 - **Bilingual UI**: English and Hungarian, switchable at runtime (Settings → General)
+- **Update check**: once a day (and from the app menu: *Check for Updates…*) — a new release shows in the sidebar, with the `brew upgrade` command for Homebrew installs; *Skip This Version* is remembered
+- **Opt-in, anonymous usage statistics** — off unless you say yes; see [Privacy](https://github.com/epaxpax/transmission-remote-gui#privacy)
 
 ## Torrent rules
 
@@ -49,6 +51,13 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
   <img src="docs/rule-editor.png" width="49%" alt="Rule editor: condition (tracker host / label / name pattern) and actions (seed ratio, idle limit, speed limits, label, stop)">
 </p>
 <p><img src="docs/rules-dry-run.png" width="60%" alt="Dry run: every torrent the rules would change, with the old and new value, before anything is applied"></p>
+
+## Privacy
+
+The app talks to your Transmission daemon(s) and, only with your consent or setting, to two services:
+
+- **Update check** (on by default, Settings → General): once a day it asks `api.github.com` for the latest release number. Nothing about you or your torrents is sent.
+- **Anonymous usage statistics** (off by default; asked once, after the first connection): at most one request a day to [GoatCounter](https://www.goatcounter.com/) containing only the **app version, the macOS major version and the daemon's major.minor version**, e.g. `/app/0.1.9/macos-15/tr-4.1`. No identifier, no cookie, no language, no server address, no torrent data. Like any web request it comes from your IP address; GoatCounter derives at most the country from it and does not store the IP. Switch it off any time in Settings → General.
 
 ## Architecture
 
@@ -112,6 +121,7 @@ python3 Scripts/uitest/test_open_with.py       # Open With / magnet links
 python3 Scripts/uitest/test_context_menu.py    # row context menu on every column
 python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns, persistence, reset
 python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filters
+python3 Scripts/uitest/test_updates.py         # update check + opt-in usage ping (local server)
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # against Transmission 4.x instead of 3.00
 ```

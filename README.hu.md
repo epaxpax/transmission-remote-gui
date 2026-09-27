@@ -33,6 +33,8 @@ tiszta lapról írt macOS-újragondolása.
 - **Menüsor (tray) ikon** le/fel sebességgel és élő grafikonnal; a **Dock-ikon elrejthető** (csak a menüsorban él)
 - UI-nagyítás (⌘+ / ⌘− / ⌘0), automatikus, állítható időközű frissítés
 - **Kétnyelvű felület**: angol és magyar, futásidőben váltható (Beállítások → Általános)
+- **Frissítés-ellenőrzés**: naponta egyszer (és az app menüjéből: *Frissítések keresése…*) — az új kiadás megjelenik az oldalsávban, Homebrew-os telepítésnél a `brew upgrade` paranccsal; a *Kihagyom ezt a verziót* megmarad
+- **Bekapcsolható, névtelen használati statisztika** — csak ha igent mondasz; lásd [Adatvédelem](https://github.com/epaxpax/transmission-remote-gui/blob/main/README.hu.md#adatvédelem)
 
 ## Torrent-szabályok
 
@@ -41,6 +43,13 @@ tiszta lapról írt macOS-újragondolása.
   <img src="docs/rule-editor.png" width="49%" alt="Szabály-szerkesztő">
 </p>
 <p><img src="docs/rules-dry-run.png" width="60%" alt="Szárazfutás: mit változtatna"></p>
+
+## Adatvédelem
+
+Az app a Transmission-daemonnal (daemonokkal) beszél, és csak beleegyezéssel vagy beállítás szerint két szolgáltatással:
+
+- **Frissítés-ellenőrzés** (alapból be, Beállítások → Általános): naponta egyszer lekérdezi az `api.github.com`-tól a legfrissebb kiadás számát. Rólad vagy a torrentjeidről semmi nem megy ki.
+- **Névtelen használati statisztika** (alapból ki; az első csatlakozás után egyszer rákérdez): naponta legfeljebb egy kérés a [GoatCounter](https://www.goatcounter.com/) felé, benne csak az **app verziója, a macOS főverzió és a daemon főverzió.alverziója**, pl. `/app/0.1.9/macos-15/tr-4.1`. Nincs azonosító, süti, nyelvi beállítás, szervercím vagy torrent-adat. Mint minden webes kérés, az IP-címedről érkezik; a GoatCounter legfeljebb az országot számolja ki belőle, az IP-t nem tárolja. Bármikor kikapcsolható: Beállítások → Általános.
 
 ## Felépítés
 
@@ -103,6 +112,7 @@ python3 Scripts/uitest/test_open_with.py       # Megnyitás / magnet linkek
 python3 Scripts/uitest/test_context_menu.py    # sor-menü minden oszlopon
 python3 Scripts/uitest/test_columns.py         # fejléc-menü: oszlopok ki/be, megmaradás, visszaállítás
 python3 Scripts/uitest/test_filters.py         # sidebar tracker- / mappaszűrők
+python3 Scripts/uitest/test_updates.py         # frissítés-ellenőrzés + opt-in statisztika (helyi szerverrel)
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # 3.00 helyett Transmission 4.x ellen
 ```

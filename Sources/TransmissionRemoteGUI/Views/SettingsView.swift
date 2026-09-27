@@ -30,9 +30,12 @@ struct SettingsView: View {
 
 // MARK: - General (language)
 
-/// Language picker (System / Hungarian / English) — switches immediately.
+/// Language picker (System / Hungarian / English) — switches immediately — plus the
+/// update check and the opt-in usage statistics.
 private struct GeneralSettingsTab: View {
     @Bindable private var l10n = Localization.shared
+    @Bindable private var updates = UpdateChecker.shared
+    @Bindable private var stats = UsageStats.shared
 
     var body: some View {
         Form {
@@ -42,6 +45,22 @@ private struct GeneralSettingsTab: View {
                 }
             }
             .pickerStyle(.inline)
+
+            Section(loc("Frissítések")) {
+                HStack {
+                    Toggle(loc("Frissítések automatikus keresése (naponta)"), isOn: $updates.isEnabled)
+                    Spacer()
+                    Button(loc("Keresés most")) { Task { await updates.check(manual: true) } }
+                }
+                Text(loc("Csak a GitHubtól kérdezi le a legfrissebb kiadás számát."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section(loc("Adatvédelem")) {
+                Toggle(loc("Névtelen használati statisztika küldése"), isOn: $stats.isEnabled)
+                Text(loc("Naponta egyszer: app-, macOS- és Transmission-verzió. Nincs azonosító, szervercím vagy torrent-adat."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
     }

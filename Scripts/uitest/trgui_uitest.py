@@ -66,6 +66,9 @@ def setup(source_app=os.path.join(ROOT, "dist", "Transmission Remote GUI.app")):
     # Rules, RSS and settings live in the copy's UserDefaults: start every run from scratch.
     sh("defaults", "delete", BUNDLE_ID, check=False)
     defaults("selectedServerID", SERVER_ID)
+    # No update check / usage-stats consent dialogs in the suites (test_updates.py turns them on).
+    defaults("updateCheckEnabled", False)
+    defaults("usageStatsEnabled", False)
     ensure_daemon()
 
 

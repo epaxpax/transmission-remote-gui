@@ -55,7 +55,9 @@ def header_menu(keys):
 
 def start():
     ui.launch(); ui.assert_isolated(); time.sleep(4)
-    ui.activate(); ui.ax(f"set size of window 1 to {{{WIDTH}, 700}}"); time.sleep(1)
+    ui.activate()
+    ui.wait_for(lambda: ui.ax("count windows") != "0", what="the window in AX")   # AX lags the window server
+    ui.ax(f"set size of window 1 to {{{WIDTH}, 700}}"); time.sleep(1)
 
 ui.setup(APP)
 ui.defaults("appLanguage", "english")
