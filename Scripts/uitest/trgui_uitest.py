@@ -391,6 +391,13 @@ nap(0.4); ev(2, {x2}, {y2}); nap(0.2);
     osa(f'run script "{js.replace(chr(34), chr(92) + chr(34))}" in "JavaScript"')
 
 
+def left_click(x, y):
+    """Real primary click via CGEvent — hits wherever the view's hit-test says, unlike AXPress."""
+    js = f'''ObjC.import("CoreGraphics"); ObjC.import("Foundation");
+function ev(t) {{ var e = $.CGEventCreateMouseEvent($(), t, $.CGPointMake({x}, {y}), 0); $.CGEventPost(0, e); }}
+ev(5); $.NSThread.sleepForTimeInterval(0.1); ev(1); $.NSThread.sleepForTimeInterval(0.05); ev(2);'''
+    osa(f'run script "{js.replace(chr(34), chr(92) + chr(34))}" in "JavaScript"')
+
 def right_click(x, y, ctrl=False):
     """Real secondary click (or Ctrl+primary click) via CGEvent."""
     if ctrl:

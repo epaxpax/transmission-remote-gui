@@ -21,6 +21,7 @@ struct SidebarView: View {
                                     .font(.caption.monospacedDigit())
                             }
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(loc(filter.title))

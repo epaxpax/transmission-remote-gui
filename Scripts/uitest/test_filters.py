@@ -39,6 +39,14 @@ def sidebar_button(ident):
             pass   # heading rows have no button
     return None
 
+def tap_blank(ident):
+    """Real mouse click on the empty space between a row's label and its count (#30) — the
+    whole row must be the hit target, not just the label."""
+    elem = sidebar_button(ident)
+    assert elem, f"no sidebar row '{ident}'"
+    x, y, w, h = (float(v) for v in ui.ax(f'get {{position, size}} of {elem}').split(", "))
+    ui.left_click(x + w * 0.7, y + h / 2); time.sleep(1)
+
 def sidebar_has(ident):
     return sidebar_button(ident) is not None
 
@@ -52,6 +60,8 @@ def shown():
     row can vanish mid-read — retry instead of failing on that race."""
     for attempt in range(5):
         try:
+            if ui.ax(f"exists {T}") != "true":   # an empty list shows a placeholder, no table
+                return []
             n = int(ui.ax(f"count rows of {T}"))
             return sorted(ui.ax(f"get value of static text 1 of UI element 1 of row {i} of {T}")
                           for i in range(1, n + 1))
@@ -84,6 +94,15 @@ try:
     check("clicking the tracker again clears it", shown() == ["f-mov-alpha", "f-mov-beta"], shown())
     tap(MOV); tap("filter.all")
     check("folder cleared too", len(shown()) == 3, shown())
+
+    # #30: the status rows answer clicks anywhere in the row, like the tracker/folder rows.
+    tap_blank("filter.downloading")
+    check("status row: click on the blank space selects it", shown() == [], shown())
+    tap_blank("filter.all")
+    check("... and back to All the same way", len(shown()) == 3, shown())
+    tap_blank(A)
+    check("tracker row: click on the blank space", shown() == ["f-mov-alpha", "f-tv-alpha"], shown())
+    tap_blank(A)
 
     add("f-tv-beta", BETA, "/downloads/tv")   # while running: its tracker comes on the next poll
     ui.wait_for(lambda: len(shown()) == 4, what="the new torrent in the list")
