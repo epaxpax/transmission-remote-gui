@@ -28,6 +28,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - Start / stop / remove (optionally along with data), **verify**, and **reannounce** — from the toolbar or the row's **right-click context menu**
 - **Right-click context menu** on torrent rows, which also offers **move** (`torrent-set-location`, with an optional "move the files" switch), **rename** (`torrent-rename-path`), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.
 - **Details panel** (toggled with ⌘I) with tabs: **General / Files / Peers / Trackers**
+  - Peers with **country flags** (bundled, offline country data — see [Peers](#peers)); every Peers / Trackers column is **sortable**, addresses in numeric order
   - Per-file download selection and priority; **per-torrent speed limit**; **labels/categories** editing
 - **Torrent rules** — per-tracker, per-label or per-name rules that set seed ratio, idle limit, speed limits and labels, or stop the torrent. First match wins, each torrent is classified once (manual changes are never overwritten), and every change is shown in a **dry run** first. Ratio/idle limits are enforced by the daemon, so they keep working while the app is closed. [Screenshots ↓](#torrent-rules)
 - **RSS auto-downloader** — watched feeds + title-match rules (substring or `/regex/`) → automatic torrent add, with dedup
@@ -52,10 +53,17 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 </p>
 <p><img src="docs/rules-dry-run.png" width="60%" alt="Dry run: every torrent the rules would change, with the old and new value, before anything is applied"></p>
 
+## Peers
+
+<p><img src="docs/peers.png" width="408" alt="Peers tab: a country flag for every peer, numeric address order, sortable client / done / speed columns"></p>
+
+The country of a peer is looked up **inside the app**, in a table built from [IP Geolocation by DB-IP](https://db-ip.com) (*IP to Country Lite*, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)) and refreshed with every release. No peer address is sent anywhere. Private and unknown addresses get no flag; hover a flag for the country name.
+
 ## Privacy
 
 The app talks to your Transmission daemon(s) and, only with your consent or setting, to two services:
 
+- **Peer country flags** need no service: the lookup runs on a table shipped with the app.
 - **Update check** (on by default, Settings → General): once a day it asks `api.github.com` for the latest release number. Nothing about you or your torrents is sent, and nothing pops up: a newer release is only a small link in the sidebar.
 - **Anonymous usage statistics** (off by default and never asked for in a pop-up; switch it on in Settings → General): at most one request a day to [GoatCounter](https://www.goatcounter.com/) containing only the **app version, the macOS major version and the daemon's major.minor version**, e.g. `/app/0.1.9/macos-15/tr-4.1`. No identifier, no cookie, no language, no server address, no torrent data. Like any web request it comes from your IP address; GoatCounter derives at most the country from it and does not store the IP. Switch it off again any time.
 
@@ -96,6 +104,8 @@ A double-clickable application can be produced even without full Xcode:
 ./Scripts/build-app.sh --dmg    # + portable .dmg
 ```
 
+The build downloads DB-IP's monthly country file once a month (cached in `.build/geoip/`) and turns it into the flag table with `Scripts/geoip.py`; offline, pass a ready table: `GEOIP_TABLE=<file> ./Scripts/build-app.sh`.
+
 Then drag **Transmission Remote GUI.app** into `/Applications`. Due to ad-hoc signing the
 bundle runs on your own machine; distributing to other Macs requires an Apple Developer ID
 and notarization.
@@ -124,6 +134,7 @@ python3 Scripts/uitest/test_open_with.py       # Open With / magnet links
 python3 Scripts/uitest/test_context_menu.py    # row context menu on every column
 python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns, persistence, reset
 python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filters, "All" rows
+python3 Scripts/uitest/test_peers.py           # Peers tab: flags, sorting (made-up peers via a local proxy)
 python3 Scripts/uitest/test_updates.py         # update check + opt-in usage ping (local server)
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # against Transmission 4.x instead of 3.00
@@ -147,3 +158,5 @@ transmission-daemon --foreground --port 9091
 ## License
 
 [MIT](LICENSE) © 2026 Viktor Falcsik
+
+The bundled peer-country table is derived from [IP Geolocation by DB-IP](https://db-ip.com), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

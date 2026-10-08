@@ -242,20 +242,80 @@ private struct FilesTab: View {
 
 private struct PeersTab: View {
     let peers: [Peer]
+    private let geo = GeoIPStore.shared
+    // The chosen column survives switching torrents / tabs and restarts.
+    @AppStorage("peerSortColumn") private var sortColumn = "address"
+    @AppStorage("peerSortAscending") private var sortAscending = true
+
+    /// One table row: the peer plus its looked-up country.
+    struct Row: Identifiable {
+        let peer: Peer
+        let country: String?
+        let countryName: String
+        var id: String { peer.address }
+        var address: AddressSortKey { peer.addressSortKey }
+        var client: String { peer.clientSortKey }
+        var progress: Double { peer.progress }
+        var down: Int { peer.rateToClient }
+        var up: Int { peer.rateToPeer }
+        /// Peers without a known country sort after the rest.
+        var countrySort: String { country == nil ? "\u{10FFFF}" : countryName }
+    }
+
+    private static let columns: [(String, KeyPathComparator<Row>)] = [
+        ("country", KeyPathComparator(\Row.countrySort)), ("address", KeyPathComparator(\Row.address)),
+        ("client", KeyPathComparator(\Row.client)), ("progress", KeyPathComparator(\Row.progress)),
+        ("down", KeyPathComparator(\Row.down)), ("up", KeyPathComparator(\Row.up)),
+    ]
+
+    private var sortOrder: Binding<[KeyPathComparator<Row>]> {
+        Binding {
+            var c = Self.columns.first { $0.0 == sortColumn }?.1 ?? KeyPathComparator(\Row.address)
+            c.order = sortAscending ? .forward : .reverse
+            return [c]
+        } set: { order in
+            guard let c = order.first else { return }
+            sortColumn = Self.columns.first { $0.1.keyPath == c.keyPath }?.0 ?? "address"
+            sortAscending = c.order == .forward
+        }
+    }
+
+    private var rows: [Row] {
+        let locale = Localization.shared.locale
+        return peers.map { peer in
+            let cc = geo.country(for: peer.address)
+            return Row(peer: peer, country: cc, countryName: cc.flatMap { locale.localizedString(forRegionCode: $0) } ?? cc ?? "")
+        }.sorted(using: sortOrder.wrappedValue)
+    }
 
     var body: some View {
-        if peers.isEmpty {
-            Text(loc("Nincsenek kapcsolódott peerek")).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            Table(peers) {
-                TableColumn(loc("Cím")) { Text($0.address).font(.caption.monospaced()) }
-                TableColumn(loc("Kliens")) { Text($0.clientName ?? "—").lineLimit(1) }
-                TableColumn(loc("Kész")) { Text(Format.percent($0.progress)) }.width(50)
-                TableColumn("↓") { Text(Format.rate($0.rateToClient)) }.width(80)
-                TableColumn("↑") { Text(Format.rate($0.rateToPeer)) }.width(80)
+        Group {
+            if peers.isEmpty {
+                Text(loc("Nincsenek kapcsolódott peerek")).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Table(rows, sortOrder: sortOrder) {
+                        TableColumn(loc("Ország"), value: \.countrySort) { row in
+                            Text(row.country.flatMap(CountryFlag.emoji) ?? "")
+                                .help(row.countryName)
+                                .accessibilityLabel(row.countryName)
+                        }.width(min: 44, ideal: 64, max: 90)
+                        TableColumn(loc("Cím"), value: \.address) { Text($0.peer.address).font(.caption.monospaced()) }
+                        TableColumn(loc("Kliens"), value: \.client) { Text($0.peer.clientName ?? "—").lineLimit(1) }
+                        TableColumn(loc("Kész"), value: \.progress) { Text(Format.percent($0.progress)) }.width(50)
+                        TableColumn("↓", value: \.down) { Text(Format.rate($0.down)) }.width(80)
+                        TableColumn("↑", value: \.up) { Text(Format.rate($0.up)) }.width(80)
+                    }
+                    if geo.table != nil {
+                        // Required by the CC BY 4.0 licence of the country data.
+                        Link(loc("Országadatok: DB-IP"), destination: URL(string: "https://db-ip.com")!)
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
             }
         }
+        .onAppear { geo.loadIfNeeded() }
     }
 }
 
@@ -263,17 +323,20 @@ private struct PeersTab: View {
 
 private struct TrackersTab: View {
     let trackers: [TrackerStat]
+    @State private var sortOrder = [KeyPathComparator(\TrackerStat.displayHost)]
 
     var body: some View {
         if trackers.isEmpty {
             Text(loc("Nincs tracker információ")).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            Table(trackers) {
-                TableColumn(loc("Tracker")) { Text($0.displayHost).lineLimit(1) }
-                TableColumn(loc("Állapot")) { Text(Localization.shared.trackerResult($0.lastAnnounceResult)).lineLimit(1) }
-                TableColumn(loc("Seedek")) { t in Text(count(t.seederCount)) }.width(60)
-                TableColumn(loc("Leecherek")) { t in Text(count(t.leecherCount)) }.width(70)
+            Table(trackers.sorted(using: sortOrder), sortOrder: $sortOrder) {
+                TableColumn(loc("Tracker"), value: \.displayHost) { Text($0.displayHost).lineLimit(1) }
+                TableColumn(loc("Állapot"), value: \.resultSortKey) {
+                    Text(Localization.shared.trackerResult($0.lastAnnounceResult)).lineLimit(1)
+                }
+                TableColumn(loc("Seedek"), value: \.seederSortKey) { t in Text(count(t.seederCount)) }.width(60)
+                TableColumn(loc("Leecherek"), value: \.leecherSortKey) { t in Text(count(t.leecherCount)) }.width(70)
             }
         }
     }

@@ -120,6 +120,8 @@ let englishStrings: [String: String] = [
     "Nincsenek kapcsolódott peerek": "No connected peers",
     "Cím": "Address",
     "Kliens": "Client",
+    "Ország": "Country",
+    "Országadatok: DB-IP": "Country data: DB-IP",
     "Nincs tracker információ": "No tracker information",
     "Seedek": "Seeds",
     "Leecherek": "Leechers",

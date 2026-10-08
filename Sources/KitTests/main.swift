@@ -1097,4 +1097,75 @@ await t.test("Idegen tracker egyik daemon-alakon sem illeszkedik") {
     }
 }
 
+print("\nGeoIP / peer sorting")
+
+/// A tiny table in the `Scripts/geoip.py` format: 1.0.0.0–1.255.255.255 AU,
+/// 2.0.0.0– unknown, 84.0.0.0– HU; 2001:db8:: – DE (as /64 starts).
+func geoFixture() -> Data {
+    var raw = Data("TRGEO1".utf8)
+    func be<T: FixedWidthInteger>(_ v: T) { withUnsafeBytes(of: v.bigEndian) { raw.append(contentsOf: $0) } }
+    be(UInt16(3)); raw.append(contentsOf: Array("AUHUDE".utf8))
+    be(UInt32(3)); be(UInt32(0x0100_0000)); be(UInt32(0x0200_0000)); be(UInt32(0x5400_0000))
+    raw.append(contentsOf: [0, 0xFF, 1])
+    be(UInt32(2)); be(UInt64(0x2001_0db8_0000_0000)); be(UInt64(0x2001_0db9_0000_0000))
+    raw.append(contentsOf: [2, 0xFF])
+    return try! (raw as NSData).compressed(using: .zlib) as Data
+}
+
+await t.test("GeoIPTable finds IPv4 / IPv6 countries and skips unknown ranges") {
+    let geo = try t.unwrap(GeoIPTable(compressed: geoFixture()))
+    try t.expectEqual(geo.rangeCount, 5)
+    try t.expectEqual(geo.country(for: "1.2.3.4"), "AU")
+    try t.expectEqual(geo.country(for: "84.1.2.3"), "HU")
+    try t.expectEqual(geo.country(for: "255.255.255.255"), "HU")   // last range runs to the end
+    try t.expectEqual(geo.country(for: "2.1.1.1"), nil)            // "ZZ" range
+    try t.expectEqual(geo.country(for: "0.0.0.1"), nil)            // before the first start
+    try t.expectEqual(geo.country(for: "2001:db8::1"), "DE")
+    try t.expectEqual(geo.country(for: "[2001:db8:0:1::5]"), "DE")
+    try t.expectEqual(geo.country(for: "2001:db9::1"), nil)
+    try t.expectEqual(geo.country(for: "::ffff:84.0.0.1"), "HU")   // IPv4-mapped
+    try t.expectEqual(geo.country(for: "not an ip"), nil)
+}
+
+await t.test("GeoIPTable rejects data that is not a table") {
+    try t.expect(GeoIPTable(compressed: Data("junk".utf8)) == nil, "junk accepted")
+    let truncated = try! (Data("TRGEO1".utf8) as NSData).compressed(using: .zlib) as Data
+    try t.expect(GeoIPTable(compressed: truncated) == nil, "truncated table accepted")
+}
+
+await t.test("Country flag emoji from ISO code") {
+    try t.expectEqual(CountryFlag.emoji("HU"), "🇭🇺")
+    try t.expectEqual(CountryFlag.emoji("us"), "🇺🇸")
+    try t.expectEqual(CountryFlag.emoji("ZZZ"), nil)
+    try t.expectEqual(CountryFlag.emoji("1A"), nil)
+}
+
+await t.test("Peer addresses sort numerically, IPv4 before IPv6, junk last") {
+    let addrs = ["84.20.1.1", "9.1.1.1", "2001:db8::1", "149.112.112.112", "84.3.0.1", "x", "::ffff:172.16.0.1"]
+    let sorted = addrs.map { a -> Peer in
+        var p = try! JSONDecoder().decode(Peer.self, from: Data(#"{"address":"\#(a)","progress":0,"rateToClient":0,"rateToPeer":0}"#.utf8))
+        p.address = a; return p
+    }
+    let expected = ["9.1.1.1", "84.3.0.1", "84.20.1.1", "149.112.112.112", "::ffff:172.16.0.1", "2001:db8::1", "x"]
+    try t.expectEqual(sorted.sorted { $0.addressSortKey < $1.addressSortKey }.map(\.address), expected)
+    // The Peers table sorts through KeyPathComparator, which compares *strings* Finder-style
+    // (a text key came out in the wrong order) — the dedicated key type must survive it.
+    try t.expectEqual(sorted.sorted(using: KeyPathComparator(\Peer.addressSortKey)).map(\.address), expected)
+    try t.expectEqual(sorted.sorted(using: KeyPathComparator(\Peer.addressSortKey, order: .reverse)).map(\.address),
+                      expected.reversed())
+}
+
+// With GEOIP_TABLE=<path to a Scripts/geoip.py output>: sanity checks on the real data.
+if let path = ProcessInfo.processInfo.environment["GEOIP_TABLE"] {
+    await t.test("Real GeoIP table: loads quickly and knows well-known addresses") {
+        let start = Date()
+        let geo = try t.unwrap(GeoIPTable(compressed: try Data(contentsOf: URL(fileURLWithPath: path))))
+        print("    \(geo.rangeCount) ranges loaded in \(Int(Date().timeIntervalSince(start) * 1000)) ms")
+        try t.expectEqual(geo.country(for: "8.8.8.8"), "US")
+        try t.expectEqual(geo.country(for: "193.6.1.1"), "HU")        // Hungarian academic network
+        try t.expectEqual(geo.country(for: "2001:738::1"), "HU")      // the same, IPv6
+        try t.expectEqual(geo.country(for: "172.16.1.1"), nil)        // private
+    }
+}
+
 exit(Int32(t.summary()))

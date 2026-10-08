@@ -5,7 +5,8 @@ The feature list and the screenshot gallery of the README are rendered into mark
 regions of the page:
 
     <!-- sync:features:start --> … <!-- sync:features:end -->
-    <!-- sync:gallery:start -->  … <!-- sync:gallery:end -->
+    <!-- sync:gallery:start -->  … <!-- sync:gallery:end -->    (## Torrent rules)
+    <!-- sync:peers:start -->    … <!-- sync:peers:end -->      (## Peers)
 
 Usage:
     Scripts/sync-site.py           # rewrite docs/index.html
@@ -68,19 +69,20 @@ def png_size(path: Path):
     return struct.unpack(">II", head[16:24]) if head[:8] == b"\x89PNG\r\n\x1a\n" else (None, None)
 
 
-def gallery_html(md: str) -> str:
+def gallery_html(md: str, title: str = "Torrent rules") -> str:
     out = []
-    for src, alt in re.findall(r'<img src="docs/([^"]+)"[^>]*alt="([^"]*)"', section(md, "Torrent rules")):
+    for src, alt in re.findall(r'<img src="docs/([^"]+)"[^>]*alt="([^"]*)"', section(md, title)):
         w, h = png_size(ROOT / "docs" / src)
         size = f' width="{w}" height="{h}"' if w else ""
         out.append(f'<img class="shot" src="{src}"{size} loading="lazy" decoding="async" alt="{html.escape(alt)}">')
     if not out:
-        sys.exit("README.md '## Torrent rules' has no docs/ images")
+        sys.exit(f"README.md '## {title}' has no docs/ images")
     return "\n  ".join(out)
 
 
 def render(page: str, md: str) -> str:
-    for name, body in (("features", features_html(md)), ("gallery", gallery_html(md))):
+    for name, body in (("features", features_html(md)), ("gallery", gallery_html(md)),
+                       ("peers", gallery_html(md, "Peers"))):
         pat = re.compile(rf"(<!-- sync:{name}:start[^>]*-->\n).*?( *<!-- sync:{name}:end -->)", re.S)
         if not pat.search(page):
             sys.exit(f"docs/index.html has no sync:{name} markers")

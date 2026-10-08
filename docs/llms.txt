@@ -30,6 +30,8 @@
 - RSS auto-download with title-match text/regex rules and dedup
 - Sidebar filters by status, tracker, download folder and label (with counts, combinable; "All …" rows clear a section)
 - Customizable torrent list columns (show/hide, extra columns, remembered layout)
+- Peers tab with country flags (offline, bundled DB-IP Lite data — no peer address is sent anywhere) and sortable columns
+- Peers tab with country flags (offline, bundled DB-IP Lite data — no peer address is sent anywhere) and sortable columns
 - Live speed graphs, Statistics panel, and menu-bar popover
 - Bandwidth scheduler with turbo/turtle modes by time and day
 - Optional per-server mTLS client-certificate authentication

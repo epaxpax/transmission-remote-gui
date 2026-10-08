@@ -117,6 +117,8 @@ let simplifiedChineseStrings: [String: String] = [
     "Nincsenek kapcsolódott peerek": "没有已连接的节点",
     "Cím": "地址",
     "Kliens": "客户端",
+    "Ország": "国家/地区",
+    "Országadatok: DB-IP": "国家/地区数据：DB-IP",
     "Nincs tracker információ": "没有 Tracker 信息",
     "Seedek": "做种者",
     "Leecherek": "下载者",

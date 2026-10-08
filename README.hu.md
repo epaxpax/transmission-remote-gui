@@ -20,7 +20,7 @@ tiszta lapról írt macOS-újragondolása.
 - **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
 - Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
 - **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
-- **Részletek panel** (⌘I) tabokkal: **Általános / Fájlok / Peerek / Trackerek**; fájlonkénti szelekció és prioritás; **torrentenkénti sebességkorlát**; **címkék/kategóriák** szerkesztése
+- **Részletek panel** (⌘I) tabokkal: **Általános / Fájlok / Peerek / Trackerek**; peerek **országzászlóval** (beépített, offline országadat — lásd [Peerek](#peerek)), a Peerek és Trackerek fül minden oszlopa **rendezhető**, a címek számsorrendben; fájlonkénti szelekció és prioritás; **torrentenkénti sebességkorlát**; **címkék/kategóriák** szerkesztése
 - **Torrent-szabályok** — trackerenkénti, címkénkénti vagy név szerinti szabályok seed arányra, idle-limitre, sebességkorlátra és címkékre, vagy leállításra. Az első illeszkedő nyer, minden torrent egyszer sorolódik be (a kézi beállítást sosem írja felül), és minden változás előbb **szárazfutásban** látszik. Az arány/idle limitet a daemon tartja be, így zárt app mellett is él. [Képek ↓](#torrent-szabályok)
 - **RSS auto-letöltő** — figyelt feed-ek + cím-szűrő szabályok (tartalmazás vagy `/regex/`) → automatikus torrent-hozzáadás, duplikátum-szűréssel
 - **mTLS kliens-tanúsítvány** hitelesítés (opcionális `.p12` szerverenként) olyan reverse proxyhoz, ami megköveteli
@@ -44,10 +44,17 @@ tiszta lapról írt macOS-újragondolása.
 </p>
 <p><img src="docs/rules-dry-run.png" width="60%" alt="Szárazfutás: mit változtatna"></p>
 
+## Peerek
+
+<p><img src="docs/peers.png" width="408" alt="Peerek fül: minden peerhez országzászló, számsorrendű címek, rendezhető kliens / kész / sebesség oszlopok"></p>
+
+A peer országát **az app maga keresi ki**, egy táblából, ami az [IP Geolocation by DB-IP](https://db-ip.com) adatából készül (*IP to Country Lite*, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), és minden kiadással frissül. Peer-cím sehova nem megy ki. Privát és ismeretlen címnek nincs zászlója; a zászló fölé húzva látszik az ország neve.
+
 ## Adatvédelem
 
 Az app a Transmission-daemonnal (daemonokkal) beszél, és csak beleegyezéssel vagy beállítás szerint két szolgáltatással:
 
+- **Peer-országzászlók**: nem kell hozzájuk szolgáltatás, a keresés az apppal szállított táblában fut.
 - **Frissítés-ellenőrzés** (alapból be, Beállítások → Általános): naponta egyszer lekérdezi az `api.github.com`-tól a legfrissebb kiadás számát. Rólad vagy a torrentjeidről semmi nem megy ki, és semmi nem ugrik fel: az új kiadás csak egy kis link az oldalsávban.
 - **Névtelen használati statisztika** (alapból ki, és felugró ablakban sem kéri; a Beállítások → Általános fülön kapcsolható be): naponta legfeljebb egy kérés a [GoatCounter](https://www.goatcounter.com/) felé, benne csak az **app verziója, a macOS főverzió és a daemon főverzió.alverziója**, pl. `/app/0.1.9/macos-15/tr-4.1`. Nincs azonosító, süti, nyelvi beállítás, szervercím vagy torrent-adat. Mint minden webes kérés, az IP-címedről érkezik; a GoatCounter legfeljebb az országot számolja ki belőle, az IP-t nem tárolja. Bármikor újra kikapcsolható.
 
@@ -88,6 +95,8 @@ Teljes Xcode nélkül is előállítható egy dupla-kattintható alkalmazás:
 ./Scripts/build-app.sh --dmg    # + hordozható .dmg
 ```
 
+A build havonta egyszer letölti a DB-IP havi országfájlját (a `.build/geoip/`-ben tárolja), és a `Scripts/geoip.py` zászlótáblát készít belőle; offline egy kész tábla adható meg: `GEOIP_TABLE=<fájl> ./Scripts/build-app.sh`.
+
 Ezután húzd a **Transmission Remote GUI.app**-ot az `/Applications` mappába. Az ad-hoc aláírás miatt
 a bundle a saját gépeden fut; más gépre való terjesztéshez Apple Developer ID + notarizáció kell.
 
@@ -115,6 +124,7 @@ python3 Scripts/uitest/test_open_with.py       # Megnyitás / magnet linkek
 python3 Scripts/uitest/test_context_menu.py    # sor-menü minden oszlopon
 python3 Scripts/uitest/test_columns.py         # fejléc-menü: oszlopok ki/be, megmaradás, visszaállítás
 python3 Scripts/uitest/test_filters.py         # sidebar tracker- / mappaszűrők, „Összes” sorok
+python3 Scripts/uitest/test_peers.py           # Peerek fül: zászlók, rendezés (kitalált peerek helyi proxyn át)
 python3 Scripts/uitest/test_updates.py         # frissítés-ellenőrzés + opt-in statisztika (helyi szerverrel)
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # 3.00 helyett Transmission 4.x ellen
@@ -138,3 +148,5 @@ transmission-daemon --foreground --port 9091
 ## Licenc
 
 [MIT](LICENSE) © 2026 Viktor Falcsik
+
+Az appba épített peer-országtábla az [IP Geolocation by DB-IP](https://db-ip.com) adatából készül, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) licenc alatt.

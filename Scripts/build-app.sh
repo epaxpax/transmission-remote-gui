@@ -9,6 +9,7 @@
 # Usage:
 #   Scripts/build-app.sh            # just the .app
 #   Scripts/build-app.sh --dmg      # + portable .dmg
+#   GEOIP_TABLE=<file> Scripts/build-app.sh   # use a prebuilt Scripts/geoip.py table (offline)
 #
 set -euo pipefail
 
@@ -44,6 +45,15 @@ mkdir -p "$ICONSET"
 swift "$ROOT/Scripts/make-icon.swift" "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 rm -rf "$(dirname "$ICONSET")"
+
+echo "==> IP → country table (DB-IP Lite, CC BY 4.0) for the Peers tab's flags…"
+# Built once a month and cached in .build; GEOIP_TABLE=<file> uses a ready-made one.
+GEOIP="${GEOIP_TABLE:-$ROOT/.build/geoip/geoip-country-$(date +%Y-%m).bin}"
+if [ ! -s "$GEOIP" ]; then
+    mkdir -p "$(dirname "$GEOIP")"
+    python3 -I "$ROOT/Scripts/geoip.py" "$GEOIP.tmp" && mv "$GEOIP.tmp" "$GEOIP"
+fi
+cp "$GEOIP" "$APP/Contents/Resources/geoip-country.bin"
 
 echo "==> Info.plist…"
 cat > "$APP/Contents/Info.plist" <<PLIST

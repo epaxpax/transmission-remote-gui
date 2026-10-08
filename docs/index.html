@@ -207,6 +207,7 @@
   <li>Start / stop / remove (optionally along with data), <strong>verify</strong>, and <strong>reannounce</strong> — from the toolbar or the row's <strong>right-click context menu</strong></li>
   <li><strong>Right-click context menu</strong> on torrent rows, which also offers <strong>move</strong> (<code>torrent-set-location</code>, with an optional "move the files" switch), <strong>rename</strong> (<code>torrent-rename-path</code>), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.</li>
   <li><strong>Details panel</strong> (toggled with ⌘I) with tabs: <strong>General / Files / Peers / Trackers</strong><ul>
+  <li>Peers with <strong>country flags</strong> (bundled, offline country data — see <a href="#peers">Peers</a>); every Peers / Trackers column is <strong>sortable</strong>, addresses in numeric order</li>
   <li>Per-file download selection and priority; <strong>per-torrent speed limit</strong>; <strong>labels/categories</strong> editing</li>
   </ul></li>
   <li><strong>Torrent rules</strong> — per-tracker, per-label or per-name rules that set seed ratio, idle limit, speed limits and labels, or stop the torrent. First match wins, each torrent is classified once (manual changes are never overwritten), and every change is shown in a <strong>dry run</strong> first. Ratio/idle limits are enforced by the daemon, so they keep working while the app is closed. <a href="#torrent-rules">Screenshots ↓</a></li>
@@ -233,6 +234,12 @@
   <img class="shot" src="rule-editor.png" width="1400" height="760" loading="lazy" decoding="async" alt="Rule editor: condition (tracker host / label / name pattern) and actions (seed ratio, idle limit, speed limits, label, stop)">
   <img class="shot" src="rules-dry-run.png" width="1400" height="760" loading="lazy" decoding="async" alt="Dry run: every torrent the rules would change, with the old and new value, before anything is applied">
   <!-- sync:gallery:end -->
+
+  <h2 id="peers">Peers</h2>
+  <p style="color:var(--muted)">A country flag for every peer, looked up offline in a table that ships with the app — no peer address leaves your Mac. Every column sorts, addresses numerically. Country data: <a href="https://db-ip.com">IP Geolocation by DB-IP</a> (CC BY 4.0).</p>
+  <!-- sync:peers:start — generated from README.md by Scripts/sync-site.py, do not edit -->
+  <img class="shot" src="peers.png" width="408" height="330" loading="lazy" decoding="async" alt="Peers tab: a country flag for every peer, numeric address order, sortable client / done / speed columns">
+  <!-- sync:peers:end -->
 
   <h2>Why Transmission Remote GUI vs. transgui or the web UI</h2>
   <div class="tablewrap">
