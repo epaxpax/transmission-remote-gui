@@ -188,6 +188,7 @@ let englishStrings: [String: String] = [
     // Torrent details tabs + Files
     "Fájlok": "Files",
     "Trackerek": "Trackers",
+    "Összes tracker": "All Trackers",
     "Nincs fájlinformáció": "No file information",
     "Alacsony": "Low",
     "Normál": "Normal",
@@ -289,6 +290,7 @@ let englishStrings: [String: String] = [
     "Sorkezelés": "Queue management",
     "Blokklista": "Blocklist",
     "Mappák": "Folders",
+    "Összes mappa": "All Folders",
     "Seedelési limitek": "Seeding limits",
     // Settings — Speed
     "Letöltési limit": "Download limit",
@@ -389,6 +391,7 @@ let englishStrings: [String: String] = [
     "Alkalmaz": "Apply",
     // Labels / categories
     "Címkék": "Labels",
+    "Összes címke": "All Labels",
     "Új címke": "New label",
     "Hozzáad": "Add",
     // mTLS client certificate

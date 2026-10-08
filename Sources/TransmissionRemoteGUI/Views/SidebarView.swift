@@ -34,15 +34,15 @@ struct SidebarView: View {
             // Value filters — each section only appears when it can actually narrow the list.
             // They combine with the status filter above and with each other.
             if !model.labelGroups.isEmpty || model.labelFilter != nil {
-                groupSection("Címkék", idPrefix: "label", icon: "tag", entries: model.labelGroups, selection: $model.labelFilter)
+                groupSection("Címkék", allTitle: "Összes címke", idPrefix: "label", icon: "tag", entries: model.labelGroups, selection: $model.labelFilter)
             }
             if !model.trackerGroups.isEmpty || model.trackerFilter != nil {
-                groupSection("Trackerek", idPrefix: "tracker", icon: "antenna.radiowaves.left.and.right",
+                groupSection("Trackerek", allTitle: "Összes tracker", idPrefix: "tracker", icon: "antenna.radiowaves.left.and.right",
                              entries: model.trackerGroups, selection: $model.trackerFilter)
             }
             if model.folderGroups.count > 1 || model.folderFilter != nil {
                 let titles = SidebarGroups.folderTitles(model.folderGroups.map(\.value))
-                groupSection("Mappák", idPrefix: "folder", icon: "folder", entries: model.folderGroups,
+                groupSection("Mappák", allTitle: "Összes mappa", idPrefix: "folder", icon: "folder", entries: model.folderGroups,
                              selection: $model.folderFilter, title: { titles[$0] ?? $0 }, help: { $0 })
             }
         }
@@ -50,11 +50,13 @@ struct SidebarView: View {
         .safeAreaInset(edge: .bottom) { statusBar }
     }
 
-    /// One value-filter section. Clicking the selected row again clears the filter. A
-    /// selected value that no torrent carries any more stays listed (count 0), so the filter
-    /// can always be switched off from where it was switched on.
+    /// One value-filter section. Its first row ("All …") clears the filter; clicking the
+    /// selected row again does the same. A selected value that no torrent carries any more
+    /// stays listed (count 0), so the filter can always be switched off from where it was
+    /// switched on.
     @ViewBuilder
-    private func groupSection(_ header: String, idPrefix: String, icon: String, entries: [SidebarGroups.Entry],
+    private func groupSection(_ header: String, allTitle: String, idPrefix: String, icon: String,
+                              entries: [SidebarGroups.Entry],
                               selection: Binding<String?>,
                               title: @escaping (String) -> String = { $0 },
                               help: @escaping (String) -> String? = { _ in nil }) -> some View {
@@ -62,27 +64,38 @@ struct SidebarView: View {
             entries.contains { $0.value == sel } ? entries : entries + [SidebarGroups.Entry(value: sel, count: 0)]
         } ?? entries
         Section(loc(header)) {
+            groupRow(loc(allTitle), icon: icon, count: model.count(for: .all), selected: selection.wrappedValue == nil,
+                     id: "sidebar.\(idPrefix)All") {
+                selection.wrappedValue = nil
+            }
             ForEach(rows, id: \.value) { entry in
-                Button {
+                groupRow(title(entry.value), icon: icon, count: entry.count,
+                         selected: selection.wrappedValue == entry.value,
+                         id: "sidebar.\(idPrefix).\(entry.value)", help: help(entry.value)) {
                     selection.wrappedValue = selection.wrappedValue == entry.value ? nil : entry.value
-                } label: {
-                    HStack {
-                        Label(title(entry.value), systemImage: icon).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Text("\(entry.count)")
-                            .foregroundStyle(.secondary)
-                            .font(.caption.monospacedDigit())
-                    }
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .help(help(entry.value) ?? "")
-                .accessibilityLabel(title(entry.value))
-                .accessibilityIdentifier("sidebar.\(idPrefix).\(entry.value)")
-                .accessibilityValue("\(entry.count)")
-                .listRowBackground(selection.wrappedValue == entry.value ? Color.accentColor.opacity(0.18) : Color.clear)
             }
         }
+    }
+
+    private func groupRow(_ title: String, icon: String, count: Int, selected: Bool, id: String,
+                          help: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Label(title, systemImage: icon).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Text("\(count)")
+                    .foregroundStyle(.secondary)
+                    .font(.caption.monospacedDigit())
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help ?? "")
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(id)
+        .accessibilityValue("\(count)")
+        .listRowBackground(selected ? Color.accentColor.opacity(0.18) : Color.clear)
     }
 
     @ViewBuilder

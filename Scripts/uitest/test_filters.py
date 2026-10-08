@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Sidebar tracker / folder filters (#16): the sections list every tracker host and download
 folder with counts, clicking one narrows the list (combined with the others and the status
-filter), clicking it again clears it, and a torrent added while running shows up in them."""
+filter), clicking it again — or the section's "All …" row (#29) — clears it, and a torrent
+added while running shows up in them."""
 import base64, os, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 import trgui_uitest as ui
@@ -103,6 +104,17 @@ try:
     tap_blank(A)
     check("tracker row: click on the blank space", shown() == ["f-mov-alpha", "f-tv-alpha"], shown())
     tap_blank(A)
+
+    # #29: explicit "All …" rows clear only their own section's filter.
+    check("All Trackers / All Folders rows listed", sidebar_has("trackerAll") and sidebar_has("folderAll"))
+    tap(A); tap(MOV)
+    check("tracker + folder again", shown() == ["f-mov-alpha"], shown())
+    tap("trackerAll")
+    check("All Trackers clears only the tracker filter", shown() == ["f-mov-alpha", "f-mov-beta"], shown())
+    tap(A); tap("folderAll")
+    check("All Folders clears only the folder filter", shown() == ["f-mov-alpha", "f-tv-alpha"], shown())
+    tap_blank("trackerAll")
+    check("All Trackers works from the blank space too", len(shown()) == 3, shown())
 
     add("f-tv-beta", BETA, "/downloads/tv")   # while running: its tracker comes on the next poll
     ui.wait_for(lambda: len(shown()) == 4, what="the new torrent in the list")
