@@ -688,6 +688,7 @@ final class AppModel {
             await loadSessionInfo()
         } catch {
             actionError = message(for: error)
+            await loadSessionInfo()   // roll back the optimistic local edit (`editSession`)
         }
     }
 

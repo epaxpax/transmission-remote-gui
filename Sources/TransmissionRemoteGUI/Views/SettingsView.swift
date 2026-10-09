@@ -226,12 +226,36 @@ private struct SessionBinder {
         )
     }
 
-    func string(_ path: WritableKeyPath<SessionInfo, String?>, default def: String = "",
-                apply: @escaping (inout SessionSetArgs, String) -> Void) -> Binding<String> {
-        Binding(
-            get: { model.sessionInfo?[keyPath: path] ?? def },
-            set: { v in model.editSession(path, to: v) { apply(&$0, v) } }
-        )
+}
+
+/// Text setting bound to a `SessionInfo` field. Unlike the toggles and steppers, it does NOT
+/// send on every keystroke (that would push half-typed paths like "/d" to the daemon): it
+/// edits a local draft and commits on Return or when the field loses focus.
+private struct SessionTextField: View {
+    @Environment(AppModel.self) private var model
+    let path: WritableKeyPath<SessionInfo, String?>
+    let apply: (inout SessionSetArgs, String) -> Void
+
+    @State private var draft = ""
+    @FocusState private var focused: Bool
+
+    private var stored: String { model.sessionInfo?[keyPath: path] ?? "" }
+
+    var body: some View {
+        TextField("", text: $draft)
+            .focused($focused)
+            .onSubmit(commit)
+            .onAppear { draft = stored }
+            // Follow server-side changes, but never overwrite what the user is typing.
+            .onChange(of: stored) { _, new in if !focused { draft = new } }
+            .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
+            .onDisappear(perform: commit)   // tab switch / window close while editing
+    }
+
+    private func commit() {
+        let value = draft
+        guard value != stored else { return }
+        model.editSession(path, to: value) { apply(&$0, value) }
     }
 }
 
@@ -380,7 +404,7 @@ private struct NetworkSettingsTab: View {
                     Toggle("", isOn: b.bool(\.blocklistEnabled) { $0.blocklistEnabled = $1 }).labelsHidden()
                 }
                 SettingRow(title: "Blokklista URL", description: "A letöltendő blokklista címe.") {
-                    TextField("", text: b.string(\.blocklistUrl) { $0.blocklistUrl = $1 })
+                    SessionTextField(path: \.blocklistUrl) { $0.blocklistUrl = $1 }
                         .frame(width: 200).labelsHidden()
                         .disabled(!(model.sessionInfo?.blocklistEnabled ?? false))
                 }
@@ -446,14 +470,14 @@ private struct DownloadSettingsTab: View {
         return formStyled {
             Section(loc("Mappák")) {
                 SettingRow(title: "Letöltési mappa", description: "A daemon ide menti a kész (és folyamatban lévő) letöltéseket. A daemon gépén értendő útvonal.") {
-                    TextField("", text: b.string(\.downloadDir) { $0.downloadDir = $1 })
+                    SessionTextField(path: \.downloadDir) { $0.downloadDir = $1 }
                         .frame(width: 240).labelsHidden()
                 }
                 SettingRow(title: "Befejezetlenek külön mappában", description: "A folyamatban lévő letöltések egy külön ideiglenes mappába kerülnek, majd készen átmozgatja.") {
                     Toggle("", isOn: b.bool(\.incompleteDirEnabled) { $0.incompleteDirEnabled = $1 }).labelsHidden()
                 }
                 SettingRow(title: "Befejezetlenek mappája", description: "A folyamatban lévő letöltések ideiglenes helye.") {
-                    TextField("", text: b.string(\.incompleteDir) { $0.incompleteDir = $1 })
+                    SessionTextField(path: \.incompleteDir) { $0.incompleteDir = $1 }
                         .frame(width: 240).labelsHidden()
                         .disabled(!(model.sessionInfo?.incompleteDirEnabled ?? false))
                 }
