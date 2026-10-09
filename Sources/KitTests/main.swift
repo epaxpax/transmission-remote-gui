@@ -336,6 +336,24 @@ await t.test("Trims a path that strayed into the host field") {
     try t.expectEqual(c.url?.absoluteString, "https://torrent.example.com:443/transmission/rpc")
 }
 
+await t.test("A port typed into the host field overrides the port field") {
+    let c = ServerConfig(host: "example.com:9092", port: 9091)
+    try t.expectEqual(c.url?.absoluteString, "http://example.com:9092/transmission/rpc")
+    let full = ServerConfig(host: "https://example.com:8443/transmission/web/", port: 9091)
+    try t.expectEqual(full.url?.absoluteString, "https://example.com:8443/transmission/rpc")
+}
+
+await t.test("IPv6 hosts work bare and bracketed (with or without port)") {
+    try t.expectEqual(ServerConfig(host: "::1", port: 9091).url?.absoluteString, "http://[::1]:9091/transmission/rpc")
+    try t.expectEqual(ServerConfig(host: "[::1]", port: 9091).url?.absoluteString, "http://[::1]:9091/transmission/rpc")
+    try t.expectEqual(ServerConfig(host: "[fd00::5]:9092", port: 9091).url?.absoluteString, "http://[fd00::5]:9092/transmission/rpc")
+}
+
+await t.test("An RPC path without a leading slash still yields a URL") {
+    let c = ServerConfig(host: "example.com", port: 9091, path: "transmission/rpc")
+    try t.expectEqual(c.url?.absoluteString, "http://example.com:9091/transmission/rpc")
+}
+
 print("\nSession settings")
 
 await t.test("An empty SessionSetArgs sends no fields at all") {

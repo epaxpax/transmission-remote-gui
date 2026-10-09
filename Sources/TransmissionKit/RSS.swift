@@ -6,7 +6,8 @@ import FoundationXML
 /// A single entry parsed from an RSS/Atom feed.
 public struct RSSItem: Sendable, Hashable, Identifiable {
     public let title: String
-    /// Download link — a magnet URI or a `.torrent` URL (from `<link>`, `<enclosure url>`, or Atom `<link href>`).
+    /// Download link — a magnet URI or a `.torrent` URL. Order of preference: a magnet `<link>`,
+    /// then `<enclosure url>` (Atom: `<link rel="enclosure">`), then any other `<link>`.
     public let link: String
     /// Stable identifier for dedup (`<guid>` / Atom `<id>`, falling back to the link).
     public let guid: String
@@ -25,7 +26,6 @@ public struct RSSItem: Sendable, Hashable, Identifiable {
 public final class RSSParser: NSObject, XMLParserDelegate {
     private var items: [RSSItem] = []
     private var inItem = false
-    private var element = ""
     private var text = ""
     private var curTitle = ""
     private var curLink = ""
@@ -43,15 +43,20 @@ public final class RSSParser: NSObject, XMLParserDelegate {
     public func parser(_ parser: XMLParser, didStartElement name: String,
                        namespaceURI: String?, qualifiedName qName: String?,
                        attributes attrs: [String: String]) {
-        element = name
         text = ""
         if name == "item" || name == "entry" {
             inItem = true
             curTitle = ""; curLink = ""; curGuid = ""; curEnclosure = ""
         }
         // Atom <link href="…">, and RSS <enclosure url="…"> carry the URL in an attribute.
+        // An Atom link with rel="enclosure" is the download itself; any other rel is usually
+        // the item's web page, so only the first such link is kept as a fallback.
         if inItem, name == "link", let href = attrs["href"], !href.isEmpty {
-            curLink = href
+            if attrs["rel"] == "enclosure" {
+                curEnclosure = href
+            } else if curLink.isEmpty {
+                curLink = href
+            }
         }
         if inItem, name == "enclosure", let url = attrs["url"], !url.isEmpty {
             curEnclosure = url
@@ -75,8 +80,14 @@ public final class RSSParser: NSObject, XMLParserDelegate {
             case "link": if curLink.isEmpty { curLink = value }   // RSS <link>text</link>
             case "guid", "id": curGuid = value
             case "item", "entry":
-                // Prefer an explicit torrent/magnet link; fall back to the enclosure URL.
-                let dl = !curLink.isEmpty ? curLink : curEnclosure
+                // A magnet link wins; otherwise the enclosure, because in many RSS 2.0 feeds
+                // <link> is the item's HTML page and only the enclosure is the .torrent.
+                let dl: String
+                if curLink.lowercased().hasPrefix("magnet:") || curEnclosure.isEmpty {
+                    dl = curLink
+                } else {
+                    dl = curEnclosure
+                }
                 if !curTitle.isEmpty, !dl.isEmpty {
                     let guid = !curGuid.isEmpty ? curGuid : dl
                     items.append(RSSItem(title: curTitle, link: dl, guid: guid))
