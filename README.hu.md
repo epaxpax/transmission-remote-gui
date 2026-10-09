@@ -27,6 +27,7 @@ tiszta lapról írt macOS-újragondolása.
 - **Sebesség-grafikon** — élő mini-chart a sidebarban, részletes **Statisztika panel**, és Stats-szerű **menüsor-popover**
 - **Sorrendi („streaming") letöltés** (Transmission 4.1+) — a darabok sorrendben töltődnek, így a média nézhető letöltés közben; hivatalos GUI/Web UI még nem tudja
 - **Több szerver**, kezelés a Beállításokban; a jelszó a **Keychain**ben; **induláskori auto-connect** a legutóbbi szerverhez
+- **Megjelenítés a Finderben** szerverenkénti távoli–helyi [útvonal-hozzárendelésekkel](docs/path-mappings.md), csatolt megosztásokhoz; a dupla kattintás működése változatlan
 - Teljes **session-beállítások** (sebesség, peerek, hálózat, sorok, letöltés, seedelés) — azonnali `session-set` írással
 - **Turtle mód** egy kattintással, plusz **sávszélesség-ütemező** (turbó automatikus be/ki napszak és hét napja szerint)
 - **Értesítés** a torrent letöltésének befejeződésekor

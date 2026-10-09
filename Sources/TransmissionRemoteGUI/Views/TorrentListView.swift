@@ -32,6 +32,7 @@ struct TorrentListView: View {
                         sortOrder: $model.sortOrder,
                         scale: model.uiScale,
                         effective: Localization.shared.effective,  // header refreshes on language change
+                        serverID: model.selectedServerID,
                         onCommand: handle
                     )
                 }
@@ -75,7 +76,7 @@ struct TorrentListView: View {
 
     /// Dispatches a context-menu command. The targets come from the menu itself, so a
     /// right-click never acts on a stale selection.
-    private func handle(_ command: TorrentRowCommand, _ targets: [Torrent]) {
+    private func handle(_ command: TorrentRowCommand, _ targets: [Torrent], _ serverID: UUID?) {
         guard !targets.isEmpty else { return }
         let ids = RPCIds.ids(targets.map { RPCIdentifier.id($0.id) })
 
@@ -98,6 +99,9 @@ struct TorrentListView: View {
             copyToPasteboard(targets.compactMap(\.name).joined(separator: "\n"))
         case .copyHash:
             copyToPasteboard(targets.compactMap(\.hashString).joined(separator: "\n"))
+        case .showInFinder:
+            guard let serverID else { return }
+            Task { await model.showInFinder(targets, serverID: serverID) }
         case .removeKeepData:
             removeRequest = RemoveRequest(torrents: targets, deleteData: false)
         case .removeWithData:

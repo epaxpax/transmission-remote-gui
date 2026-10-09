@@ -36,6 +36,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Speed graph** — a live mini-chart in the sidebar, a detailed **Statistics panel**, and a Stats-style **menu-bar popover**
 - **Sequential ("streaming") download** (Transmission 4.1+) — pieces download in order so media can be watched while still downloading; no official GUI/Web UI exposes this yet
 - **Multiple servers**, managed in Settings; passwords stored in the **Keychain**; **auto-connect** to the last used server on launch
+- **Show in Finder** via per-server remote-to-local [path mappings](docs/path-mappings.md) for mounted shares; double-click behaviour is unchanged
 - Full **session settings** (speed, peers, network, queues, download, seeding) — written immediately via `session-set`
 - **Turtle mode** (alternative speed limits) with one click, plus a **bandwidth scheduler** (turbo on/off by time of day and day of week)
 - **Notification** when a torrent finishes downloading

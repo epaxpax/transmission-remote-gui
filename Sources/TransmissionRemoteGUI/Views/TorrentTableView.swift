@@ -12,10 +12,11 @@ struct TorrentTableView: NSViewRepresentable {
     @Binding var sortOrder: [KeyPathComparator<Torrent>]
     var scale: Double = 1.0
     var effective: AppLanguage = .hungarian   // for tracking language changes (column header refresh)
+    var serverID: UUID?
     /// Invoked when a context-menu command is chosen. The targeted torrents are captured
     /// when the menu opens, so the command never depends on the selection binding having
     /// propagated back to SwiftUI in the meantime.
-    var onCommand: (TorrentRowCommand, [Torrent]) -> Void = { _, _ in }
+    var onCommand: (TorrentRowCommand, [Torrent], UUID?) -> Void = { _, _, _ in }
 
     private static let baseRowHeight: CGFloat = 22
     private static let baseFontSize: CGFloat = 12
@@ -211,6 +212,7 @@ struct TorrentTableView: NSViewRepresentable {
 
         /// Torrents the currently open context menu acts on (captured when it opens).
         private var menuTargets: [Torrent] = []
+        private var menuServerID: UUID?
         private lazy var rowMenu: NSMenu = Self.makeRowMenu(target: self)
 
         init(_ parent: TorrentTableView) { self.parent = parent }
@@ -229,6 +231,7 @@ struct TorrentTableView: NSViewRepresentable {
             }
 
             menuTargets = TorrentRowMenu.targets(rows: rows, in: data)
+            menuServerID = parent.serverID
             guard !menuTargets.isEmpty else { return nil }
 
             // Titles are refreshed on every open so a language switch is picked up for free.
@@ -244,7 +247,7 @@ struct TorrentTableView: NSViewRepresentable {
 
         @objc func menuCommandSelected(_ sender: NSMenuItem) {
             guard let command = sender.representedObject as? TorrentRowCommand else { return }
-            parent.onCommand(command, menuTargets)
+            parent.onCommand(command, menuTargets, menuServerID)
         }
 
         /// Builds the menu from `TorrentRowMenu.layout`, so a command can never be

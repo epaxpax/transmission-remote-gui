@@ -9,6 +9,24 @@ typealias Localization = TransmissionLocalization.Localization
 @MainActor
 func loc(_ key: String) -> String { Localization.shared.text(key) }
 
+@MainActor
+func locPathMappingError(_ error: Error) -> String {
+    guard let error = error as? PathMappingError else { return locError(error) }
+    switch error {
+    case .invalidMapping: return loc("Adj meg abszolút távoli és helyi mappákat; a . és .. nem engedélyezett.")
+    case .duplicateRemotePath: return loc("Egy távoli mappához csak egy hozzárendelés tartozhat.")
+    case .invalidRemotePath: return loc("Érvénytelen fájlútvonal érkezett a szervertől.")
+    case .noMapping: return loc("Nincs illeszkedő útvonal-hozzárendelés. Állítsd be a Beállítások → Szerverek → Szerkesztés alatt.")
+    case .metadataUnavailable: return loc("A torrent fájllistája még nem érhető el.")
+    case .contentChanged: return loc("A torrent megváltozott vagy már nem található. Próbáld újra.")
+    case .unmountedVolume: return loc("A helyi kötet nincs csatolva. Csatold a megosztást a Finderben.")
+    case .notFound: return loc("A hozzárendelt fájl vagy mappa nem található.")
+    case .notReadable: return loc("A hozzárendelt útvonal nem olvasható. Ellenőrizd a jogosultságokat.")
+    case .outsideMapping: return loc("Az útvonal a hozzárendelt mappán kívülre mutat.")
+    case .timedOut: return loc("A helyi megosztás nem válaszolt időben. Ellenőrizd a kapcsolatot, majd próbáld újra.")
+    }
+}
+
 /// Torrent statuses use a separate vocabulary from settings labels.
 @MainActor
 func locStatus(_ source: String) -> String { Localization.shared.status(source) }

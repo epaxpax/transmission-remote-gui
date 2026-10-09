@@ -19,6 +19,8 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
     public var clientCertPath: String?
     /// Passphrase for the client-certificate .p12.
     public var clientCertPassword: String?
+    /// Client-only path mappings. Optional so pre-mapping servers.json files still decode.
+    public var pathMappings: [PathMapping]?
 
     public init(
         id: UUID = UUID(),
@@ -31,7 +33,8 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
         password: String = "",
         refreshInterval: Double = 3,
         clientCertPath: String? = nil,
-        clientCertPassword: String? = nil
+        clientCertPassword: String? = nil,
+        pathMappings: [PathMapping]? = nil
     ) {
         self.id = id
         self.name = name
@@ -44,6 +47,7 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
         self.refreshInterval = refreshInterval
         self.clientCertPath = clientCertPath
         self.clientCertPassword = clientCertPassword
+        self.pathMappings = pathMappings
     }
 
     /// The full RPC endpoint URL.

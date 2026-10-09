@@ -61,6 +61,7 @@ final class AppModel {
     /// Last failed action's message, shown as an alert and cleared when dismissed.
     /// Separate from `connection`, which describes the link to the server.
     var actionError: String?
+    private var isShowingInFinder = false
 
     /// Sort order of the list (controlled by the Table header). Default: newest additions first.
     var sortOrder: [KeyPathComparator<Torrent>] = [
@@ -416,6 +417,35 @@ final class AppModel {
         guard let client, let dir = sessionInfo?.downloadDir, !dir.isEmpty else { return }
         let space = try? await client.freeSpace(path: dir)
         if isCurrent(client) { freeSpace = space }
+    }
+
+    /// Client-only action: the only daemon request is torrent-get.
+    func showInFinder(_ targets: [Torrent], serverID: UUID) async {
+        guard !targets.isEmpty, !isShowingInFinder, selectedServerID == serverID,
+              let client, let server = selectedServer else { return }
+        let mappings = server.pathMappings ?? []
+        isShowingInFinder = true
+        defer { isShowingInFinder = false }
+        do {
+            guard !mappings.isEmpty else { throw PathMappingError.noMapping }
+            let current = try await client.torrentGet(fields: TorrentContentLocator.fields,
+                ids: .ids(targets.map { .id($0.id) }))
+            guard isCurrent(client), selectedServerID == serverID else { return }
+            let locations = try targets.map { original in
+                guard let torrent = current.first(where: { TorrentContentLocator.matches($0, original: original) })
+                else { throw PathMappingError.contentChanged }
+                return try TorrentContentLocator.resolve(torrent, using: mappings)
+            }
+            let urls = try await LocalPathAccess.validate(locations)
+            guard isCurrent(client), selectedServerID == serverID,
+                  (selectedServer?.pathMappings ?? []) == mappings else { return }
+            NSWorkspace.shared.activateFileViewerSelecting(Array(Set(urls)).sorted { $0.path < $1.path })
+        } catch is CancellationError {
+            // Cancelled actions do not change the daemon connection state.
+        } catch {
+            guard isCurrent(client), selectedServerID == serverID else { return }
+            actionError = locPathMappingError(error)
+        }
     }
 
     /// Fetches extended fields for the selected torrent (if exactly one is selected).

@@ -19,6 +19,7 @@ struct ServerEditView: View {
     @State private var clientCertPath = ""
     @State private var clientCertPassword = ""
     @State private var showCertImporter = false
+    @State private var pathMappings: [PathMappingDraft] = []
 
     private var isEditing: Bool { server != nil }
 
@@ -28,7 +29,8 @@ struct ServerEditView: View {
                 .font(.title2.bold())
                 .padding(.bottom, 12)
 
-            Form {
+            TabView {
+              Form {
                 TextField(loc("Név"), text: $name)
                 TextField(loc("Hoszt"), text: $host)
                 TextField("Port", text: $port)
@@ -48,8 +50,12 @@ struct ServerEditView: View {
                     }
                     SecureField(loc("Tanúsítvány jelszava"), text: $clientCertPassword)
                 }
+              }
+              .formStyle(.grouped)
+              .tabItem { Text(loc("Csatlakozás")) }
+              PathMappingsView(rows: $pathMappings)
+                  .tabItem { Text(loc("Útvonal-hozzárendelések")) }
             }
-            .formStyle(.grouped)
             .fileImporter(isPresented: $showCertImporter,
                           allowedContentTypes: [UTType(filenameExtension: "p12") ?? .data,
                                                 UTType(filenameExtension: "pfx") ?? .data]) { result in
@@ -62,7 +68,7 @@ struct ServerEditView: View {
                     .keyboardShortcut(.cancelAction)
                 Button(isEditing ? loc("Mentés") : loc("Hozzáadás")) { save() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty || host.isEmpty)
+                    .disabled(name.isEmpty || host.isEmpty || !mappingsAreValid)
             }
             .padding(.top, 12)
         }
@@ -83,9 +89,15 @@ struct ServerEditView: View {
         refreshInterval = server.refreshInterval
         clientCertPath = server.clientCertPath ?? ""
         clientCertPassword = server.clientCertPassword ?? ""
+        pathMappings = (server.pathMappings ?? []).map(PathMappingDraft.init)
+    }
+
+    private var mappingsAreValid: Bool {
+        (try? PathMapping.validated(pathMappings.filter { !$0.isEmpty }.map(\.mapping))) != nil
     }
 
     private func save() {
+        guard let mappings = try? PathMapping.validated(pathMappings.filter { !$0.isEmpty }.map(\.mapping)) else { return }
         let config = ServerConfig(
             id: server?.id ?? UUID(),
             name: name,
@@ -97,7 +109,8 @@ struct ServerEditView: View {
             password: password,
             refreshInterval: refreshInterval,
             clientCertPath: clientCertPath.isEmpty ? nil : clientCertPath,
-            clientCertPassword: clientCertPassword.isEmpty ? nil : clientCertPassword
+            clientCertPassword: clientCertPassword.isEmpty ? nil : clientCertPassword,
+            pathMappings: mappings.isEmpty ? nil : mappings
         )
         model.addOrUpdate(server: config)
         // Connect to a new server right away.
