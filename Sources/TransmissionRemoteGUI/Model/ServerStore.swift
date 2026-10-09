@@ -2,7 +2,7 @@ import Foundation
 import TransmissionKit
 
 /// Persists server configurations: metadata as JSON in Application Support,
-/// the password in the Keychain.
+/// the secrets (RPC password, client-certificate passphrase) in the Keychain.
 enum ServerStore {
     private static var fileURL: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -18,19 +18,33 @@ enum ServerStore {
               var servers = try? JSONDecoder().decode([ServerConfig].self, from: data) else {
             return []
         }
-        // Reload the password from the Keychain.
+        // Reload the secrets from the Keychain. Versions up to 0.1.11 wrote the certificate
+        // passphrase into the JSON in plain text: if one is found, move it to the Keychain
+        // and rewrite the file without it.
+        var migrated = false
         for index in servers.indices {
-            servers[index].password = Keychain.password(for: servers[index].id)
+            let id = servers[index].id
+            servers[index].password = Keychain.password(for: id)
+            if let legacy = servers[index].clientCertPassword, !legacy.isEmpty {
+                migrated = true
+            } else {
+                let stored = Keychain.password(for: id, slot: .clientCertPassword)
+                servers[index].clientCertPassword = stored.isEmpty ? nil : stored
+            }
         }
+        if migrated { save(servers) }
         return servers
     }
 
     static func save(_ servers: [ServerConfig]) {
-        // Password goes to the Keychain; kept empty in the JSON.
+        // Secrets go to the Keychain; kept empty in the JSON.
         var sanitized = servers
         for index in sanitized.indices {
-            Keychain.setPassword(sanitized[index].password, for: sanitized[index].id)
+            let id = sanitized[index].id
+            Keychain.setPassword(sanitized[index].password, for: id)
+            Keychain.setPassword(sanitized[index].clientCertPassword ?? "", for: id, slot: .clientCertPassword)
             sanitized[index].password = ""
+            sanitized[index].clientCertPassword = nil
         }
         if let data = try? JSONEncoder().encode(sanitized) {
             try? data.write(to: fileURL, options: .atomic)

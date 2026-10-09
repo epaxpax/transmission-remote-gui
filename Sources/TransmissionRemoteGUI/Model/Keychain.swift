@@ -1,16 +1,30 @@
 import Foundation
 import Security
 
-/// Simple Keychain store for server passwords.
+/// Simple Keychain store for server secrets (RPC password, client-certificate passphrase).
 enum Keychain {
+    /// Which secret of a server an entry holds.
+    enum Slot {
+        case rpcPassword
+        case clientCertPassword
+    }
+
     /// Historical service name — deliberately does not follow the app's renaming:
     /// changing it would "lose" existing users' saved passwords.
     private static let service = "hu.transwift.servers"
 
-    static func setPassword(_ password: String, for id: UUID) {
-        let account = id.uuidString
+    /// The RPC password keeps the bare UUID as account (existing entries stay valid).
+    private static func account(_ id: UUID, _ slot: Slot) -> String {
+        switch slot {
+        case .rpcPassword: return id.uuidString
+        case .clientCertPassword: return id.uuidString + ".cert"
+        }
+    }
+
+    static func setPassword(_ password: String, for id: UUID, slot: Slot = .rpcPassword) {
+        let account = account(id, slot)
         // Delete the existing entry, then write the new one (idempotent upsert).
-        delete(for: id)
+        deleteEntry(account)
         guard !password.isEmpty, let data = password.data(using: .utf8) else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -21,11 +35,11 @@ enum Keychain {
         SecItemAdd(query as CFDictionary, nil)
     }
 
-    static func password(for id: UUID) -> String {
+    static func password(for id: UUID, slot: Slot = .rpcPassword) -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: id.uuidString,
+            kSecAttrAccount as String: account(id, slot),
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
@@ -38,11 +52,17 @@ enum Keychain {
         return string
     }
 
+    /// Removes every secret of the server.
     static func delete(for id: UUID) {
+        deleteEntry(account(id, .rpcPassword))
+        deleteEntry(account(id, .clientCertPassword))
+    }
+
+    private static func deleteEntry(_ account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: id.uuidString,
+            kSecAttrAccount as String: account,
         ]
         SecItemDelete(query as CFDictionary)
     }
