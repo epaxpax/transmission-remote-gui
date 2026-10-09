@@ -53,6 +53,12 @@ public actor RPCClient {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            // A cancelled task is not a network failure: callers stop quietly instead of
+            // showing "cancelled" as a connection error.
+            throw CancellationError()
         } catch {
             throw RPCError.transport(error.localizedDescription)
         }

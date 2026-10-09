@@ -263,6 +263,10 @@ final class AppModel {
         speedHistory = []
         trackersByID = [:]        // another server's torrent ids mean other torrents
         trackersFetchedAt = nil
+        sessionInfo = nil
+        sessionStats = nil
+        freeSpace = nil
+        detailTorrent = nil
         rulesSkipUntil = nil      // a different (or repaired) server deserves a fresh attempt
         client = RPCClient(config: server, session: server.makeSession())
         startPolling(interval: server.refreshInterval)
@@ -321,13 +325,21 @@ final class AppModel {
         }
     }
 
+    /// Whether `client` is still the active one. A request that was already in flight when
+    /// the user switched servers (or disconnected) must not write its result into the new state.
+    private func isCurrent(_ client: RPCClient) -> Bool {
+        self.client === client
+    }
+
     func refresh() async {
         guard let client else { return }
         do {
             async let torrentsResult = client.torrentGet()
             async let statsResult = client.sessionStats()
             let (listed, stats) = try await (torrentsResult, statsResult)
+            guard isCurrent(client) else { return }
             let fetched = await mergeTrackers(into: listed, client: client)
+            guard isCurrent(client) else { return }
             notifyNewlyFinished(fetched)
             self.torrents = fetched   // sorting is done by the displayedTorrents cache (per sortOrder)
             self.sessionStats = stats
@@ -336,7 +348,10 @@ final class AppModel {
             await self.addPendingIncoming()
             await self.refreshDetail()
             await self.loadFreeSpace()
+        } catch is CancellationError {
+            // The poll was stopped (server switch / disconnect) — not a connection error.
         } catch {
+            guard isCurrent(client) else { return }
             self.connection = .failed(locError(error))
         }
     }
@@ -350,7 +365,8 @@ final class AppModel {
         let missing = stale ? [] : listed.map(\.id).filter { trackersByID[$0] == nil }
         if stale || !missing.isEmpty,
            let rows = try? await client.torrentGet(fields: TorrentFields.trackers,
-                                                   ids: stale ? .all : .ids(missing.map { .id($0) })) {
+                                                   ids: stale ? .all : .ids(missing.map { .id($0) })),
+           isCurrent(client) {
             if stale { trackersByID = [:]; trackersFetchedAt = Date() }
             for row in rows { trackersByID[row.id] = (row.trackers ?? [], row.trackerStats ?? []) }
         }
@@ -365,7 +381,8 @@ final class AppModel {
 
     private func loadSessionInfo() async {
         guard let client else { return }
-        sessionInfo = try? await client.sessionGet()
+        let info = try? await client.sessionGet()
+        if isCurrent(client) { sessionInfo = info }
     }
 
     /// Sends notifications for torrents that just entered the "download finished" state.
@@ -397,7 +414,8 @@ final class AppModel {
     /// Fetches the free space available on the download directory (if the directory is known).
     private func loadFreeSpace() async {
         guard let client, let dir = sessionInfo?.downloadDir, !dir.isEmpty else { return }
-        freeSpace = try? await client.freeSpace(path: dir)
+        let space = try? await client.freeSpace(path: dir)
+        if isCurrent(client) { freeSpace = space }
     }
 
     /// Fetches extended fields for the selected torrent (if exactly one is selected).
