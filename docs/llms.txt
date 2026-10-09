@@ -4,7 +4,7 @@
 > BitTorrent daemon. Built in SwiftUI for macOS 14+, it is a modern alternative
 > to transgui (transmission-remote-gui), adding torrent rules, sequential streaming, RSS
 > auto-download, labels/filters, live speed graphs, a bandwidth scheduler, and
-> mTLS. Current version 0.1.11.
+> mTLS. Current version 0.1.12.
 
 ## Key facts
 - Name: Transmission Remote GUI
