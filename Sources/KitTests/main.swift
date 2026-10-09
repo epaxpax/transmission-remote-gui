@@ -427,6 +427,30 @@ await t.test("RSSParser handles Atom entries (link href + id)") {
     try t.expectEqual(items[0].guid, "a1")
 }
 
+await t.test("RSSParser prefers the enclosure over a web-page <link>, but not over a magnet") {
+    let xml = #"""
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel><title>Feed</title>
+    <item><title>Page.Link</title><link>https://site/details/1</link><enclosure url="https://site/1.torrent"/></item>
+    <item><title>Magnet.Link</title><link>magnet:?xt=urn:btih:m</link><enclosure url="https://site/2.torrent"/></item>
+    <item><title>Only.Page</title><link>https://site/3.torrent</link></item>
+    </channel></rss>
+    """#
+    let items = RSSParser.parse(Data(xml.utf8))
+    try t.expectEqual(items.map(\.link), ["https://site/1.torrent", "magnet:?xt=urn:btih:m", "https://site/3.torrent"])
+}
+
+await t.test("RSSParser takes Atom rel=enclosure over the alternate (web page) link") {
+    let xml = #"""
+    <?xml version="1.0"?>
+    <feed><entry><title>Atom.Rel</title>
+    <link rel="alternate" href="https://site/page"/><link rel="enclosure" href="https://site/a.torrent"/>
+    <id>a2</id></entry></feed>
+    """#
+    let items = RSSParser.parse(Data(xml.utf8))
+    try t.expectEqual(items.first?.link, "https://site/a.torrent")
+}
+
 print("\ntorrent-set-location")
 
 await t.test("torrentSetLocation sends the new location and asks the daemon to move the data") {

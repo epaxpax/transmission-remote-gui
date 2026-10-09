@@ -49,8 +49,10 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
     /// The full RPC endpoint URL.
     ///
     /// Robust against convenience input in the host field: if the user entered
-    /// the host with a scheme (`https://…`) or a trailing path, those are
-    /// stripped. An explicit scheme in the host overrides the `useHTTPS` flag.
+    /// the host with a scheme (`https://…`), a port (`host:9091`) or a trailing path,
+    /// those are stripped. An explicit scheme or port in the host overrides `useHTTPS`
+    /// and `port`. A bare IPv6 address (`::1`) is bracketed, and a path without a
+    /// leading slash gets one.
     public var url: URL? {
         var rawHost = host.trimmingCharacters(in: .whitespaces)
         var scheme = useHTTPS ? "https" : "http"
@@ -67,11 +69,29 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
             rawHost = String(rawHost[..<slash])
         }
 
+        var effectivePort = port
+        if rawHost.hasPrefix("["), let close = rawHost.firstIndex(of: "]") {
+            // "[::1]" or "[::1]:9091"
+            let rest = rawHost[rawHost.index(after: close)...]
+            if rest.hasPrefix(":"), let p = Int(rest.dropFirst()) { effectivePort = p }
+            rawHost = String(rawHost[...close])
+        } else if rawHost.filter({ $0 == ":" }).count == 1, let colon = rawHost.firstIndex(of: ":") {
+            // "example.com:9091"
+            if let p = Int(rawHost[rawHost.index(after: colon)...]) { effectivePort = p }
+            rawHost = String(rawHost[..<colon])
+        } else if rawHost.contains(":") {
+            // Bare IPv6 address: URLComponents only accepts it in brackets.
+            rawHost = "[\(rawHost)]"
+        }
+
+        var rpcPath = path.trimmingCharacters(in: .whitespaces)
+        if !rpcPath.isEmpty, !rpcPath.hasPrefix("/") { rpcPath = "/" + rpcPath }
+
         var components = URLComponents()
         components.scheme = scheme
         components.host = rawHost
-        components.port = port
-        components.path = path
+        components.port = effectivePort
+        components.path = rpcPath
         return components.url
     }
 
