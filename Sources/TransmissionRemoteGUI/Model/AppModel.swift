@@ -424,7 +424,9 @@ final class AppModel {
             detailTorrent = nil
             return
         }
-        if let detail = try? await client.torrentGet(fields: TorrentFields.detail, ids: .ids([.id(id)])).first {
+        if detailTorrent?.id != id { detailTorrent = nil }
+        if let detail = try? await client.torrentGet(fields: TorrentFields.detail, ids: .ids([.id(id)])).first,
+           isCurrent(client), singleSelectedTorrent?.id == id {
             detailTorrent = detail
         }
     }

@@ -6,15 +6,18 @@ struct TorrentDetailView: View {
 
     var body: some View {
         Group {
-            if let torrent = model.singleSelectedTorrent {
+            if let selected = model.singleSelectedTorrent {
+                // The detail fetch may still belong to the previous selection: only use it
+                // when it is for this torrent, otherwise show the list row until it arrives.
+                let torrent = model.detailTorrent.flatMap { $0.id == selected.id ? $0 : nil } ?? selected
                 TabView {
-                    GeneralTab(torrent: model.detailTorrent ?? torrent)
+                    GeneralTab(torrent: torrent)
                         .tabItem { Label(loc("Általános"), systemImage: "info.circle") }
-                    FilesTab(torrent: model.detailTorrent ?? torrent)
+                    FilesTab(torrent: torrent)
                         .tabItem { Label(loc("Fájlok"), systemImage: "doc.on.doc") }
-                    PeersTab(peers: (model.detailTorrent ?? torrent).peers ?? [])
+                    PeersTab(peers: torrent.peers ?? [])
                         .tabItem { Label(loc("Peerek"), systemImage: "person.2") }
-                    TrackersTab(trackers: (model.detailTorrent ?? torrent).trackerStats ?? [])
+                    TrackersTab(trackers: torrent.trackerStats ?? [])
                         .tabItem { Label(loc("Trackerek"), systemImage: "antenna.radiowaves.left.and.right") }
                 }
                 .padding(8)
@@ -96,14 +99,17 @@ private struct SpeedLimitEditor: View {
             limitRow(loc("Feltöltés"), isOn: $upOn, value: $up)
             Button(loc("Alkalmaz")) {
                 Task {
-                    await model.setSpeedLimit(downEnabled: downOn, down: down, upEnabled: upOn, up: up)
+                    await model.setSpeedLimit(downEnabled: downOn, down: down, upEnabled: upOn, up: up,
+                                              ids: .ids([.id(torrent.id)]))
                 }
             }
             .padding(.top, 2)
         }
         .font(.callout)
         .onAppear { load() }
-        .onChange(of: torrent.id) { _, _ in load() }
+        // Reload when the selection changes AND when the detail fetch (the only one carrying
+        // the limit fields) arrives for the same torrent.
+        .onChange(of: limitKey) { _, _ in load() }
     }
 
     private func limitRow(_ label: String, isOn: Binding<Bool>, value: Binding<Int>) -> some View {
@@ -113,6 +119,12 @@ private struct SpeedLimitEditor: View {
                 .frame(width: 70).multilineTextAlignment(.trailing).disabled(!isOn.wrappedValue)
             Text("kB/s").foregroundStyle(.secondary)
         }
+    }
+
+    private var limitKey: [Int] {
+        [torrent.id,
+         (torrent.downloadLimited ?? false) ? 1 : 0, torrent.downloadLimit ?? -1,
+         (torrent.uploadLimited ?? false) ? 1 : 0, torrent.uploadLimit ?? -1]
     }
 
     private func load() {
@@ -161,12 +173,12 @@ private struct LabelsEditor: View {
         var labels = torrent.labels ?? []
         guard !labels.contains(t) else { return }
         labels.append(t)
-        Task { await model.setLabels(labels) }
+        Task { await model.setLabels(labels, ids: .ids([.id(torrent.id)])) }
     }
 
     private func remove(_ label: String) {
         let labels = (torrent.labels ?? []).filter { $0 != label }
-        Task { await model.setLabels(labels) }
+        Task { await model.setLabels(labels, ids: .ids([.id(torrent.id)])) }
     }
 }
 
