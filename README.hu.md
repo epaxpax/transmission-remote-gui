@@ -17,6 +17,7 @@ tiszta lapról írt macOS-újragondolása.
 - Sidebar szűrők + darabszámok (Összes / Letöltés alatt / Kész / Aktív / Inaktív / Leállítva / Hibás), plusz **tracker**, **letöltési mappa** és **címke (kategória)** szűrők darabszámmal — egymással és az állapotszűrővel is kombinálhatók; a szekció **Összes …** sora (vagy a kijelölt sorra újra kattintás) csak azt a szűrőt kapcsolja ki
 - Keresés a listában
 - Torrent hozzáadása **magnet linkből / URL-ből**, **`.torrent` fájlból**, valamint **drag & drop**pal az ablakra
+- **Letöltési mappa választása** a hozzáadás ablakban — szerveroldali útvonal csak az adott torrenthez (alapból a daemon letöltési mappája, ami nem változik), szerverenkénti **kedvenc** és **legutóbb használt** mappákkal
 - **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
 - Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
 - **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
@@ -128,6 +129,7 @@ python3 Scripts/uitest/test_filters.py         # sidebar tracker- / mappaszűrő
 python3 Scripts/uitest/test_peers.py           # Peerek fül: zászlók, rendezés (kitalált peerek helyi proxyn át)
 python3 Scripts/uitest/test_path_mappings.py   # Megjelenítés a Finderben útvonal-hozzárendeléssel (helyi mock szerver)
 python3 Scripts/uitest/test_updates.py         # frissítés-ellenőrzés + opt-in statisztika (helyi szerverrel)
+python3 Scripts/uitest/test_add_download_dir.py # hozzáadás ablak: torrentenkénti letöltési mappa, kedvencek, előzmények
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # 3.00 helyett Transmission 4.x ellen
 ```

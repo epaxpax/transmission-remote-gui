@@ -24,6 +24,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **tracker**, **download folder** and **label (category)** filters with counts — they combine with each other and the status filter; each section's **All …** row (or clicking the selected row again) clears just that filter
 - Search within the list
 - Add torrents via **magnet link / URL**, **`.torrent` file**, or **drag & drop** onto the window
+- **Choose the download folder** in the Add dialog — a daemon-side path for that torrent only (defaults to the daemon's download folder, which stays unchanged), with per-server **favorite** and **recently used** folders
 - **Open With / double-click** a `.torrent` in Finder, or click a **magnet link** in the browser — added to the current server (queued until connected if the app was closed), without extra windows
 - Start / stop / remove (optionally along with data), **verify**, and **reannounce** — from the toolbar or the row's **right-click context menu**
 - **Right-click context menu** on torrent rows, which also offers **move** (`torrent-set-location`, with an optional "move the files" switch), **rename** (`torrent-rename-path`), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.
@@ -138,6 +139,7 @@ python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filter
 python3 Scripts/uitest/test_peers.py           # Peers tab: flags, sorting (made-up peers via a local proxy)
 python3 Scripts/uitest/test_path_mappings.py   # Show in Finder via path mappings (local mock server)
 python3 Scripts/uitest/test_updates.py         # update check + opt-in usage ping (local server)
+python3 Scripts/uitest/test_add_download_dir.py # Add dialog: per-torrent download folder, favorites, history
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # against Transmission 4.x instead of 3.00
 ```

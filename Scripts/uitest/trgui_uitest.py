@@ -227,6 +227,70 @@ def ax(body):
 def activate():
     ax("set frontmost to true")
 
+def ax_id(identifier, action, scope="window 1", attempts=3):
+    """`_ax_id` with retries: a periodic refresh can swap the rows mid-walk, so a miss is
+    retried before it counts."""
+    for attempt in range(attempts):
+        try:
+            return _ax_id(identifier, action, scope)
+        except RuntimeError as e:
+            if "no element with identifier" not in str(e) or attempt == attempts - 1:
+                raise
+            time.sleep(0.7)
+
+def _ax_id(identifier, action, scope="window 1"):
+    """Runs `action` (AppleScript inside `tell process`, the element is `e`) on the element with
+    this accessibility identifier under `scope`. The tree is walked level by level: `entire
+    contents` comes back empty through the helper, and `whose` cannot filter on AXIdentifier."""
+    return osa(f'''on findId(el, ident, depth)
+  tell application "System Events"
+    set kids to {{}}
+    try
+      set kids to UI elements of el
+    end try
+    repeat with k in kids
+      set k to contents of k
+      try
+        if value of attribute "AXIdentifier" of k is ident then return k
+      end try
+      if depth < 30 then
+        set f to my findId(k, ident, depth + 1)
+        if f is not missing value then return f
+      end if
+    end repeat
+  end tell
+  return missing value
+end findId
+tell application "System Events" to tell process "{PROCESS}" to set root to {scope}
+set e to findId(root, "{identifier}", 1)
+if e is missing value then error "no element with identifier {identifier}"
+tell application "System Events" to tell process "{PROCESS}"
+{action}
+end tell''')
+
+def id_exists(identifier, scope="window 1"):
+    try:
+        ax_id(identifier, "return true", scope)
+        return True
+    except RuntimeError:
+        return False
+
+def id_value(identifier, scope="window 1"):
+    return ax_id(identifier, "return value of e", scope)
+
+def id_enabled(identifier, scope="window 1"):
+    return ax_id(identifier, "return enabled of e", scope) == "true"
+
+def id_click(identifier, scope="window 1"):
+    ax_id(identifier, 'perform action "AXPress" of e', scope)
+
+def id_type(identifier, text, scope="window 1"):
+    """Focuses a text field by identifier and replaces its text by typing."""
+    ax_id(identifier, f'''set frontmost to true
+set focused of e to true
+keystroke "a" using command down
+keystroke "{text}"''', scope)
+
 
 # ---------- RPC against the test daemon ----------
 

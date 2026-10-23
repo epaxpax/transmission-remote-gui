@@ -19,6 +19,8 @@ final class AppModel {
         didSet { persistSelectedServer() }   // most recently used server, for auto-connect
     }
     private static let selectedServerKey = "selectedServerID"
+    /// Add dialog favorite / recent download directories per server (see `AppModel+DownloadDirs`).
+    var downloadDirsByServer: [UUID: DownloadDirectories] = DownloadDirStore.load()
 
     // Connection / data
     private(set) var connection: ConnectionState = .disconnected
@@ -647,12 +649,15 @@ final class AppModel {
         }
     }
 
-    func add(filename: String, paused: Bool = false) async {
-        await perform { _ = try await $0.torrentAdd(filename: filename, paused: paused) }
+    /// `downloadDir` applies to this torrent only (nil = the daemon's default); returns success.
+    @discardableResult
+    func add(filename: String, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
+        await perform { _ = try await $0.torrentAdd(filename: filename, paused: paused, downloadDir: downloadDir) }
     }
 
-    func add(metainfoBase64: String, paused: Bool = false) async {
-        await perform { _ = try await $0.torrentAdd(metainfoBase64: metainfoBase64, paused: paused) }
+    @discardableResult
+    func add(metainfoBase64: String, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
+        await perform { _ = try await $0.torrentAdd(metainfoBase64: metainfoBase64, paused: paused, downloadDir: downloadDir) }
     }
 
     /// Torrents opened from outside (Finder, browser magnet link) before a connection existed.
@@ -698,11 +703,12 @@ final class AppModel {
 
     /// Adds a `.torrent` file from a URL: security-scoped read + base64 + torrent-add.
     /// Shared path for the Add dialog and drag & drop.
-    func addTorrentFile(_ url: URL, paused: Bool = false) async {
+    @discardableResult
+    func addTorrentFile(_ url: URL, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return }
-        await add(metainfoBase64: data.base64EncodedString(), paused: paused)
+        guard let data = try? Data(contentsOf: url) else { return false }
+        return await add(metainfoBase64: data.base64EncodedString(), paused: paused, downloadDir: downloadDir)
     }
 
     func applyTorrentSet(_ args: TorrentSetArgs) async {
@@ -740,13 +746,16 @@ final class AppModel {
     /// replace the whole list with an error placeholder for the one second until the next
     /// refresh, hiding the message instead of showing it. Genuine connection loss is
     /// detected by `refresh()` itself.
-    private func perform(_ action: (RPCClient) async throws -> Void) async {
-        guard let client else { return }
+    @discardableResult
+    private func perform(_ action: (RPCClient) async throws -> Void) async -> Bool {
+        guard let client else { return false }
         do {
             try await action(client)
             await refresh()
+            return true
         } catch {
             actionError = message(for: error)
+            return false
         }
     }
 
@@ -769,6 +778,7 @@ final class AppModel {
         servers.removeAll { $0.id == server.id }
         Keychain.delete(for: server.id)
         ServerStore.save(servers)
+        forgetDownloadDirs(for: server.id)
         if selectedServerID == server.id {
             disconnect()
             selectedServerID = servers.first?.id

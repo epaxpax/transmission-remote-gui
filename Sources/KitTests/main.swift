@@ -1211,5 +1211,6 @@ if let path = ProcessInfo.processInfo.environment["GEOIP_TABLE"] {
 }
 
 await testPathMappings(t)
+await testDownloadDirectories(t)
 
 exit(Int32(t.summary()))

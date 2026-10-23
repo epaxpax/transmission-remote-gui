@@ -152,6 +152,17 @@ let englishStrings: [String: String] = [
     "Magnet link vagy URL": "Magnet link or URL",
     ".torrent fájl választása": "Choose .torrent file",
     "Leállítva add hozzá": "Add paused",
+    // Add dialog: per-torrent download folder, favorites and history
+    "Csak ennél a torrentnél — a szerver alapértelmezett mappája nem változik.": "For this torrent only — the server's default folder is not changed.",
+    "Abszolút útvonalat adj meg, vagy hagyd üresen az alapértelmezett mappához.": "Enter an absolute path, or leave it empty for the default folder.",
+    "Alapértelmezett mappa": "Default folder",
+    "Kedvencek": "Favorites",
+    "Legutóbb használt": "Recently used",
+    "Hozzáadás a kedvencekhez": "Add to Favorites",
+    "Eltávolítás a kedvencek közül": "Remove from Favorites",
+    "Kedvenc eltávolítása": "Remove Favorite",
+    "Előzmények törlése": "Clear History",
+    "Kedvenc és legutóbbi mappák": "Favorite and recent folders",
     // Server edit dialog
     "Szerver szerkesztése": "Edit server",
     "Új szerver": "New server",
