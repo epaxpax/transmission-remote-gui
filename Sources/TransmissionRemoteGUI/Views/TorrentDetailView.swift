@@ -184,69 +184,138 @@ private struct LabelsEditor: View {
 
 // MARK: - Files
 
+/// Hierarchical file list. The tree is rebuilt from every detail refresh, but node ids are
+/// relative paths, so rows keep their identity and the expanded folders stay open.
 private struct FilesTab: View {
     @Environment(AppModel.self) private var model
     let torrent: Torrent
+    /// Expanded folder ids per torrent; a torrent without an entry uses the default.
+    @State private var expandedByTorrent: [String: Set<String>] = [:]
+
+    private var torrentKey: String { torrent.hashString ?? "#\(torrent.id)" }
 
     var body: some View {
         let files = torrent.files ?? []
-        let stats = torrent.fileStats ?? []
         if files.isEmpty {
             Text(loc("Nincs fájlinformáció")).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List {
-                ForEach(Array(files.enumerated()), id: \.offset) { index, file in
-                    let stat = index < stats.count ? stats[index] : nil
-                    HStack {
-                        Toggle("", isOn: Binding(
-                            get: { stat?.wanted ?? true },
-                            set: { wanted in setWanted(index: index, wanted: wanted) }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.checkbox)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(file.name).lineLimit(1).truncationMode(.middle)
-                            HStack(spacing: 6) {
-                                Text(Format.size(file.length))
-                                Text(Format.percent(file.progress))
-                            }
-                            .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if let stat {
-                            Picker("", selection: Binding(
-                                get: { stat.priorityValue },
-                                set: { setPriority(index: index, priority: $0) }
-                            )) {
-                                Text(loc("Alacsony")).tag(TorrentFileStat.Priority.low)
-                                Text(loc("Normál")).tag(TorrentFileStat.Priority.normal)
-                                Text(loc("Magas")).tag(TorrentFileStat.Priority.high)
-                            }
-                            .labelsHidden()
-                            .frame(width: 100)
+            let roots = FileTree.build(files: files, stats: torrent.fileStats)
+            let expanded = expandedByTorrent[torrentKey] ?? FileTree.defaultExpanded(roots)
+            let canShowInFinder = TorrentRowMenu.isVisible(.showInFinder,
+                hasPathMappings: !(model.selectedServer?.pathMappings ?? []).isEmpty)
+            List(FileTree.visibleRows(roots, expanded: expanded)) { node in
+                FileTreeRow(node: node,
+                            isExpanded: expanded.contains(node.id),
+                            toggleExpanded: { toggleExpanded(node, current: expanded) },
+                            setWanted: { setWanted(node, wanted: $0) },
+                            setPriority: { setPriority(node, priority: $0) })
+                    .contextMenu {
+                        if canShowInFinder {
+                            Button(loc("Megjelenítés a Finderben")) { showInFinder(node) }
                         }
                     }
+            }
+            .accessibilityIdentifier("files.list")
+        }
+    }
+
+    private func toggleExpanded(_ node: FileTreeNode, current: Set<String>) {
+        var next = current
+        if next.contains(node.id) { next.remove(node.id) } else { next.insert(node.id) }
+        expandedByTorrent[torrentKey] = next
+    }
+
+    /// One `torrent-set` for the file or for every file below the folder.
+    private func setWanted(_ node: FileTreeNode, wanted: Bool) {
+        let args = FileTree.wantedArgs(torrentID: torrent.id, indices: node.fileIndices, wanted: wanted)
+        Task { await model.applyTorrentSet(args) }
+    }
+
+    private func setPriority(_ node: FileTreeNode, priority: TorrentFileStat.Priority) {
+        let args = FileTree.priorityArgs(torrentID: torrent.id, indices: node.fileIndices, priority: priority)
+        Task { await model.applyTorrentSet(args) }
+    }
+
+    private func showInFinder(_ node: FileTreeNode) {
+        guard let serverID = model.selectedServerID else { return }
+        let torrent = torrent
+        Task { await model.showInFinder(torrent, entry: node.path, isFile: !node.isDirectory, serverID: serverID) }
+    }
+}
+
+private struct FileTreeRow: View {
+    let node: FileTreeNode
+    let isExpanded: Bool
+    let toggleExpanded: () -> Void
+    let setWanted: (Bool) -> Void
+    let setPriority: (TorrentFileStat.Priority) -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Color.clear.frame(width: CGFloat(node.depth) * 16, height: 1)
+            if node.isDirectory {
+                Button(action: toggleExpanded) {
+                    Image(systemName: "chevron.right")
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .frame(width: 14, height: 14)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(isExpanded ? loc("Összecsukás") : loc("Kibontás"))
+                .accessibilityIdentifier("files.disclosure." + node.id)
+            } else {
+                Color.clear.frame(width: 14, height: 1)
+            }
+
+            if let wanted = node.wanted {
+                // Two sources that disagree render the native "mixed" checkbox state;
+                // only the first one sends the change, so a click is one `torrent-set`.
+                Toggle(sources: [
+                    Binding(get: { wanted != .off }, set: { setWanted($0) }),
+                    Binding(get: { wanted == .on }, set: { _ in }),
+                ], isOn: \.self) { EmptyView() }
+                .labelsHidden()
+                .toggleStyle(.checkbox)
+                .accessibilityIdentifier("files.wanted." + node.id)
+            }
+
+            Image(systemName: node.isDirectory ? "folder" : "doc")
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(node.name).lineLimit(1).truncationMode(.middle)
+                HStack(spacing: 6) {
+                    Text(Format.size(node.length))
+                    Text(Format.percent(node.progress))
+                    if node.isDirectory {
+                        Text(node.fileIndices.count == 1 ? loc("1 fájl") : "\(node.fileIndices.count) " + loc("fájl"))
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if let priority = node.priority {
+                Picker("", selection: Binding(
+                    get: { priority },
+                    set: { if case .uniform(let value) = $0 { setPriority(value) } }
+                )) {
+                    if priority == .mixed {
+                        Text(loc("Vegyes")).tag(FileTreeNode.PriorityState.mixed)
+                    }
+                    Text(loc("Alacsony")).tag(FileTreeNode.PriorityState.uniform(.low))
+                    Text(loc("Normál")).tag(FileTreeNode.PriorityState.uniform(.normal))
+                    Text(loc("Magas")).tag(FileTreeNode.PriorityState.uniform(.high))
+                }
+                .labelsHidden()
+                .frame(width: 100)
+                .accessibilityIdentifier("files.priority." + node.id)
             }
         }
-    }
-
-    private func setWanted(index: Int, wanted: Bool) {
-        var args = TorrentSetArgs(ids: .ids([.id(torrent.id)]))
-        if wanted { args.filesWanted = [index] } else { args.filesUnwanted = [index] }
-        Task { await model.applyTorrentSet(args) }
-    }
-
-    private func setPriority(index: Int, priority: TorrentFileStat.Priority) {
-        var args = TorrentSetArgs(ids: .ids([.id(torrent.id)]))
-        switch priority {
-        case .low: args.priorityLow = [index]
-        case .normal: args.priorityNormal = [index]
-        case .high: args.priorityHigh = [index]
-        }
-        Task { await model.applyTorrentSet(args) }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("files.row." + node.id)
     }
 }
 

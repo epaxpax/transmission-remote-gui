@@ -450,6 +450,42 @@ final class AppModel {
         }
     }
 
+    /// Reveals one file or folder of a torrent (Files tab); `entry` is the path relative to
+    /// the download directory. An incomplete file may still carry the daemon's ".part" suffix.
+    func showInFinder(_ torrent: Torrent, entry: String, isFile: Bool, serverID: UUID) async {
+        guard !isShowingInFinder, selectedServerID == serverID,
+              let client, let server = selectedServer else { return }
+        let mappings = server.pathMappings ?? []
+        isShowingInFinder = true
+        defer { isShowingInFinder = false }
+        do {
+            guard !mappings.isEmpty else { throw PathMappingError.noMapping }
+            let current = try await client.torrentGet(fields: TorrentContentLocator.fields,
+                ids: .ids([.id(torrent.id)]))
+            guard isCurrent(client), selectedServerID == serverID else { return }
+            guard let fresh = current.first(where: { TorrentContentLocator.matches($0, original: torrent) })
+            else { throw PathMappingError.contentChanged }
+            let location = try TorrentContentLocator.resolve(fresh, entry: entry, using: mappings)
+            let urls: [URL]
+            do {
+                urls = try await LocalPathAccess.validate([location])
+            } catch PathMappingError.notFound where isFile {
+                let partial = MappedPath(url: location.url.appendingPathExtension("part"),
+                                         localRoot: location.localRoot)
+                guard let found = try? await LocalPathAccess.validate([partial]) else { throw PathMappingError.notFound }
+                urls = found
+            }
+            guard isCurrent(client), selectedServerID == serverID,
+                  (selectedServer?.pathMappings ?? []) == mappings else { return }
+            NSWorkspace.shared.activateFileViewerSelecting(urls)
+        } catch is CancellationError {
+            // Cancelled actions do not change the daemon connection state.
+        } catch {
+            guard isCurrent(client), selectedServerID == serverID else { return }
+            actionError = locPathMappingError(error)
+        }
+    }
+
     /// Fetches extended fields for the selected torrent (if exactly one is selected).
     func refreshDetail() async {
         guard let client, let id = singleSelectedTorrent?.id else {

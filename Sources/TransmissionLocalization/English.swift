@@ -138,6 +138,12 @@ let englishStrings: [String: String] = [
     "Alacsony": "Low",
     "Normál": "Normal",
     "Magas": "High",
+    // Hierarchical Files tab
+    "Vegyes": "Mixed",
+    "Kibontás": "Expand",
+    "Összecsukás": "Collapse",
+    "fájl": "files",
+    "1 fájl": "1 file",
     // Peers / Trackers tabs
     "Nincsenek kapcsolódott peerek": "No connected peers",
     "Cím": "Address",
@@ -397,7 +403,6 @@ let englishStrings: [String: String] = [
     "Globális korlátok": "Global limits",
     "A globális sebességkorlátok is érvényesek": "Global speed limits also apply",
     "Sávszélesség-prioritás": "Bandwidth priority",
-    "Vegyes": "Mixed",
     "Peer-limit": "Peer limit",
     "Korlátozva": "Limited",
     "Eredeti érték visszaállítása": "Revert to the original value",

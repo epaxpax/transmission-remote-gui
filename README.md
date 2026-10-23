@@ -31,7 +31,8 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Batch-edit properties** of the selected torrents (right-click → *Properties…*): download / upload limit, honour global speed limits, bandwidth priority, peer limit and labels. Fields where the torrents differ show as *Mixed*; nothing changes unless you edit it. Labels can be **added / removed** (every other label stays) or **replaced** as a whole list (labels need Transmission 3.00+)
 - **Details panel** (toggled with ⌘I) with tabs: **General / Files / Peers / Trackers**
   - Peers with **country flags** (bundled, offline country data — see [Peers](#peers)); every Peers / Trackers column is **sortable**, addresses in numeric order
-  - Per-file download selection and priority; **per-torrent speed limit**; **labels/categories** editing
+  - **Files as a folder tree**: expand/collapse folders with aggregated size and progress; a folder's checkbox (mixed when partly selected) and priority apply to every file inside in one call; **Show in Finder** for a single file or folder when a path mapping applies
+  - **Per-torrent speed limit**; **labels/categories** editing
 - **Torrent rules** — per-tracker, per-label or per-name rules that set seed ratio, idle limit, speed limits and labels, or stop the torrent. First match wins, each torrent is classified once (manual changes are never overwritten), and every change is shown in a **dry run** first. Ratio/idle limits are enforced by the daemon, so they keep working while the app is closed. [Screenshots ↓](#torrent-rules)
 - **RSS auto-downloader** — watched feeds + title-match rules (substring or `/regex/`) → automatic torrent add, with dedup
 - **mTLS client-certificate** authentication (optional `.p12` per server) for a reverse proxy that requires it
@@ -140,6 +141,7 @@ python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns,
 python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filters, "All" rows
 python3 Scripts/uitest/test_peers.py           # Peers tab: flags, sorting (made-up peers via a local proxy)
 python3 Scripts/uitest/test_path_mappings.py   # Show in Finder via path mappings (local mock server)
+python3 Scripts/uitest/test_file_tree.py       # Files tab tree: expand, folder select/priority (local mock server)
 python3 Scripts/uitest/test_updates.py         # update check + opt-in usage ping (local server)
 python3 Scripts/uitest/test_add_download_dir.py # Add dialog: per-torrent download folder, favorites, history
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"

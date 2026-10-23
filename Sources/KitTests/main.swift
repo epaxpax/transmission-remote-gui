@@ -1213,5 +1213,6 @@ if let path = ProcessInfo.processInfo.environment["GEOIP_TABLE"] {
 await testPathMappings(t)
 await testDownloadDirectories(t)
 await testTorrentProperties(t)
+await testFileTree(t)
 
 exit(Int32(t.summary()))
