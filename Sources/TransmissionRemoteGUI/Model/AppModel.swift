@@ -649,6 +649,38 @@ final class AppModel {
         }
     }
 
+    /// Whether the connected daemon knows torrent labels (Transmission 3.00+).
+    var labelsSupported: Bool {
+        TorrentLabelSupport.isSupported(rpcVersion: sessionInfo?.rpcVersion)
+    }
+
+    /// The batch property editor's current values for the given torrents.
+    func loadProperties(ids: RPCIds) async throws -> [TorrentProperties] {
+        guard let client else { throw RPCError.transport(loc("Nincs kapcsolat")) }
+        return try await client.torrentProperties(ids: ids)
+    }
+
+    /// Applies the batch property editor's edits. The labels are re-read right before the
+    /// write, so an add/remove never drops a label set elsewhere since the editor opened.
+    func applyProperties(_ edits: TorrentPropertyEdits, ids: RPCIds) async {
+        guard !edits.isEmpty else { return }
+        await perform { client in
+            var targets = [TorrentProperties]()
+            if edits.labels != nil {
+                targets = try await client.torrentProperties(ids: ids)
+            } else if case .ids(let identifiers) = ids {
+                // Only the ids matter without a label edit — no need for a round trip.
+                targets = identifiers.compactMap {
+                    if case .id(let id) = $0 { return TorrentProperties(id: id) }
+                    return nil
+                }
+            }
+            for args in edits.setArgs(for: targets) {
+                try await client.torrentSet(args)
+            }
+        }
+    }
+
     /// `downloadDir` applies to this torrent only (nil = the daemon's default); returns success.
     @discardableResult
     func add(filename: String, paused: Bool = false, downloadDir: String? = nil) async -> Bool {

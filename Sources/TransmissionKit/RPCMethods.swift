@@ -52,8 +52,8 @@ private struct TorrentGetArgs: Encodable {
     }
 }
 
-private struct TorrentGetResult: Decodable {
-    let torrents: [Torrent]
+private struct TorrentGetResult<Item: Decodable>: Decodable {
+    let torrents: [Item]
 }
 
 private struct IDsArgs: Encodable {
@@ -153,6 +153,12 @@ public struct TorrentSetArgs: Encodable, Sendable {
     /// Minutes of seeding inactivity, with the same mode rule as the ratio pair.
     public var seedIdleLimit: Int?
     public var seedIdleMode: Int?
+    /// Whether the session-wide speed limits also apply to the torrent.
+    public var honorsSessionLimits: Bool?
+    /// -1 low, 0 normal, 1 high.
+    public var bandwidthPriority: Int?
+    /// Maximum connected peers for the torrent.
+    public var peerLimit: Int?
 
     public init(ids: RPCIds) {
         self.ids = ids
@@ -172,6 +178,8 @@ public struct TorrentSetArgs: Encodable, Sendable {
         case sequentialDownload = "sequential_download"
         case labels
         case seedRatioLimit, seedRatioMode, seedIdleLimit, seedIdleMode
+        case honorsSessionLimits, bandwidthPriority
+        case peerLimit = "peer-limit"
     }
 }
 
@@ -293,7 +301,14 @@ public extension RPCClient {
         ids: RPCIds = .all
     ) async throws -> [Torrent] {
         let args = TorrentGetArgs(fields: fields, ids: ids.normalizedForRequest)
-        let result: TorrentGetResult = try await send(method: "torrent-get", arguments: args)
+        let result: TorrentGetResult<Torrent> = try await send(method: "torrent-get", arguments: args)
+        return result.torrents
+    }
+
+    /// Fetches the batch property editor's fields for the given torrents.
+    func torrentProperties(ids: RPCIds) async throws -> [TorrentProperties] {
+        let args = TorrentGetArgs(fields: TorrentProperties.fields, ids: ids.normalizedForRequest)
+        let result: TorrentGetResult<TorrentProperties> = try await send(method: "torrent-get", arguments: args)
         return result.torrents
     }
 

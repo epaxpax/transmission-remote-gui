@@ -374,6 +374,28 @@ let simplifiedChineseStrings: [String: String] = [
     "Tracker": "Tracker",
     "Torrent kész": "种子下载完成",
     "Success": "成功",
+    // Batch torrent property editor
+    "Tulajdonságok…": "属性…",
+    "Torrent tulajdonságai": "种子属性",
+    "Csak a módosított mezők változnak.": "仅应用你修改过的字段。",
+    "Globális korlátok": "全局限制",
+    "A globális sebességkorlátok is érvényesek": "同时遵循全局速度限制",
+    "Sávszélesség-prioritás": "带宽优先级",
+    "Vegyes": "混合",
+    "Peer-limit": "节点限制",
+    "Korlátozva": "启用限制",
+    "Eredeti érték visszaállítása": "恢复原始值",
+    "A címkékhez Transmission 3.00 vagy újabb kell.": "标签需要 Transmission 3.00 或更高版本。",
+    "Mindegyiken:": "全部都有：",
+    "Csak némelyiken:": "部分才有：",
+    "Hozzáadás / eltávolítás": "添加 / 移除",
+    "Összes cseréje": "全部替换",
+    "Hozzáadandó": "要添加",
+    "Eltávolítandó": "要移除",
+    "címke1, címke2": "标签1, 标签2",
+    "A többi meglévő címke megmarad.": "其他已有标签将保留。",
+    "Minden kijelölt torrent összes címkéjét erre a listára cseréli.": "将所有已选种子的全部标签替换为此列表。",
+    "A kijelölt torrentek már nem érhetők el.": "所选种子已不可用。",
 ]
 
 

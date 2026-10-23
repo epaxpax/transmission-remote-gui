@@ -28,6 +28,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Open With / double-click** a `.torrent` in Finder, or click a **magnet link** in the browser — added to the current server (queued until connected if the app was closed), without extra windows
 - Start / stop / remove (optionally along with data), **verify**, and **reannounce** — from the toolbar or the row's **right-click context menu**
 - **Right-click context menu** on torrent rows, which also offers **move** (`torrent-set-location`, with an optional "move the files" switch), **rename** (`torrent-rename-path`), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.
+- **Batch-edit properties** of the selected torrents (right-click → *Properties…*): download / upload limit, honour global speed limits, bandwidth priority, peer limit and labels. Fields where the torrents differ show as *Mixed*; nothing changes unless you edit it. Labels can be **added / removed** (every other label stays) or **replaced** as a whole list (labels need Transmission 3.00+)
 - **Details panel** (toggled with ⌘I) with tabs: **General / Files / Peers / Trackers**
   - Peers with **country flags** (bundled, offline country data — see [Peers](#peers)); every Peers / Trackers column is **sortable**, addresses in numeric order
   - Per-file download selection and priority; **per-torrent speed limit**; **labels/categories** editing
@@ -134,6 +135,7 @@ Docker, via Accessibility, real mouse input and screenshots:
                                                # System Settings → Privacy & Security → Accessibility
 python3 Scripts/uitest/test_open_with.py       # Open With / magnet links
 python3 Scripts/uitest/test_context_menu.py    # row context menu on every column
+python3 Scripts/uitest/test_properties.py      # batch property editor: mixed values, only edited fields sent
 python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns, persistence, reset
 python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filters, "All" rows
 python3 Scripts/uitest/test_peers.py           # Peers tab: flags, sorting (made-up peers via a local proxy)

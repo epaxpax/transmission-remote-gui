@@ -390,6 +390,28 @@ let englishStrings: [String: String] = [
     "Kötelező": "Required",
     "Előnyben részesített": "Preferred",
     "Megengedő": "Tolerated",
+    // Batch torrent property editor
+    "Tulajdonságok…": "Properties…",
+    "Torrent tulajdonságai": "Torrent Properties",
+    "Csak a módosított mezők változnak.": "Only the fields you change are applied.",
+    "Globális korlátok": "Global limits",
+    "A globális sebességkorlátok is érvényesek": "Global speed limits also apply",
+    "Sávszélesség-prioritás": "Bandwidth priority",
+    "Vegyes": "Mixed",
+    "Peer-limit": "Peer limit",
+    "Korlátozva": "Limited",
+    "Eredeti érték visszaállítása": "Revert to the original value",
+    "A címkékhez Transmission 3.00 vagy újabb kell.": "Labels require Transmission 3.00 or later.",
+    "Mindegyiken:": "On all:",
+    "Csak némelyiken:": "On some:",
+    "Hozzáadás / eltávolítás": "Add / Remove",
+    "Összes cseréje": "Replace All",
+    "Hozzáadandó": "Add",
+    "Eltávolítandó": "Remove",
+    "címke1, címke2": "label1, label2",
+    "A többi meglévő címke megmarad.": "All other existing labels are kept.",
+    "Minden kijelölt torrent összes címkéjét erre a listára cseréli.": "Replaces every label on all selected torrents with this list.",
+    "A kijelölt torrentek már nem érhetők el.": "The selected torrents are no longer available.",
 ]
 
 let englishPack = LanguagePack(

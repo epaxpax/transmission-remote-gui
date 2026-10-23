@@ -21,6 +21,7 @@ tiszta lapról írt macOS-újragondolása.
 - **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
 - Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
 - **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
+- **Tulajdonságok csoportos szerkesztése** a kijelölt torrenteken (jobb klikk → *Tulajdonságok…*): letöltési / feltöltési korlát, a globális sebességkorlátok figyelembevétele, sávszélesség-prioritás, peer-limit és címkék. Ahol a torrentek eltérnek, *Vegyes* látszik; semmi sem változik, amit nem módosítasz. A címkék **hozzáadhatók / eltávolíthatók** (a többi címke megmarad) vagy **teljes listaként cserélhetők** (címkékhez Transmission 3.00+ kell)
 - **Részletek panel** (⌘I) tabokkal: **Általános / Fájlok / Peerek / Trackerek**; peerek **országzászlóval** (beépített, offline országadat — lásd [Peerek](#peerek)), a Peerek és Trackerek fül minden oszlopa **rendezhető**, a címek számsorrendben; fájlonkénti szelekció és prioritás; **torrentenkénti sebességkorlát**; **címkék/kategóriák** szerkesztése
 - **Torrent-szabályok** — trackerenkénti, címkénkénti vagy név szerinti szabályok seed arányra, idle-limitre, sebességkorlátra és címkékre, vagy leállításra. Az első illeszkedő nyer, minden torrent egyszer sorolódik be (a kézi beállítást sosem írja felül), és minden változás előbb **szárazfutásban** látszik. Az arány/idle limitet a daemon tartja be, így zárt app mellett is él. [Képek ↓](#torrent-szabályok)
 - **RSS auto-letöltő** — figyelt feed-ek + cím-szűrő szabályok (tartalmazás vagy `/regex/`) → automatikus torrent-hozzáadás, duplikátum-szűréssel
@@ -124,6 +125,7 @@ ellen, Accessibility-n, valódi egéreseményeken és képernyőképeken át:
                                                # Rendszerbeállítások → Adatvédelem → Kisegítő lehetőségek
 python3 Scripts/uitest/test_open_with.py       # Megnyitás / magnet linkek
 python3 Scripts/uitest/test_context_menu.py    # sor-menü minden oszlopon
+python3 Scripts/uitest/test_properties.py      # csoportos tulajdonság-szerkesztő: vegyes értékek, csak a módosított mező megy ki
 python3 Scripts/uitest/test_columns.py         # fejléc-menü: oszlopok ki/be, megmaradás, visszaállítás
 python3 Scripts/uitest/test_filters.py         # sidebar tracker- / mappaszűrők, „Összes” sorok
 python3 Scripts/uitest/test_peers.py           # Peerek fül: zászlók, rendezés (kitalált peerek helyi proxyn át)

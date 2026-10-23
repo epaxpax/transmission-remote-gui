@@ -267,6 +267,7 @@ struct TorrentTableView: NSViewRepresentable {
                                       keyEquivalent: "")
                 item.target = target
                 item.representedObject = entry.command
+                item.setAccessibilityIdentifier("rowMenu." + entry.command.rawValue)
                 menu.addItem(item)
                 if entry.separatorAfter { menu.addItem(.separator()) }
             }

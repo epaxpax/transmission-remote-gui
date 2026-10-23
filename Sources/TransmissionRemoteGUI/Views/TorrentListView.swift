@@ -7,6 +7,7 @@ struct TorrentListView: View {
 
     @State private var moveRequest: MoveRequest?
     @State private var renameRequest: RenameRequest?
+    @State private var propertiesRequest: PropertiesRequest?
     @State private var removeRequest: RemoveRequest?
 
     var body: some View {
@@ -50,6 +51,14 @@ struct TorrentListView: View {
                 Task { await model.rename(id: request.torrent.id, from: request.oldName, to: newName) }
             }
         }
+        .sheet(item: $propertiesRequest) { request in
+            TorrentPropertiesView(
+                torrents: request.torrents,
+                labelsSupported: model.labelsSupported,
+                load: { try await model.loadProperties(ids: request.ids) },
+                onSubmit: { edits, ids in Task { await model.applyProperties(edits, ids: ids) } }
+            )
+        }
         .confirmationDialog(
             loc("Biztosan törlöd a kijelölt torrent(eket)?"),
             isPresented: Binding(get: { removeRequest != nil },
@@ -92,6 +101,8 @@ struct TorrentListView: View {
             Task { await model.reannounce(ids: ids) }
         case .move:
             moveRequest = MoveRequest(torrents: targets)
+        case .editProperties:
+            propertiesRequest = PropertiesRequest(torrents: targets)
         case .rename:
             // Enablement guarantees a single, named torrent; the guard keeps that honest.
             guard let torrent = targets.first, let oldName = torrent.name, targets.count == 1 else { return }
@@ -134,6 +145,12 @@ struct TorrentListView: View {
 // opened for even if the selection changes while it is up.
 
 private struct MoveRequest: Identifiable {
+    let id = UUID()
+    let torrents: [Torrent]
+    var ids: RPCIds { .ids(torrents.map { RPCIdentifier.id($0.id) }) }
+}
+
+private struct PropertiesRequest: Identifiable {
     let id = UUID()
     let torrents: [Torrent]
     var ids: RPCIds { .ids(torrents.map { RPCIdentifier.id($0.id) }) }

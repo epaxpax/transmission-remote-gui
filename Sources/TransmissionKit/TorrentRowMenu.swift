@@ -9,6 +9,7 @@ public enum TorrentRowCommand: String, CaseIterable, Sendable {
     case stop
     case move
     case rename
+    case editProperties
     case verify
     case reannounce
     case copyName
@@ -37,7 +38,8 @@ public enum TorrentRowMenu {
         Entry(command: .start, titleKey: "Indítás", separatorAfter: false),
         Entry(command: .stop, titleKey: "Leállítás", separatorAfter: true),
         Entry(command: .move, titleKey: "Áthelyezés…", separatorAfter: false),
-        Entry(command: .rename, titleKey: "Átnevezés…", separatorAfter: true),
+        Entry(command: .rename, titleKey: "Átnevezés…", separatorAfter: false),
+        Entry(command: .editProperties, titleKey: "Tulajdonságok…", separatorAfter: true),
         Entry(command: .verify, titleKey: "Ellenőrzés (verify)", separatorAfter: false),
         Entry(command: .reannounce, titleKey: "Újrabejelentés a trackernek", separatorAfter: true),
         Entry(command: .showInFinder, titleKey: "Megjelenítés a Finderben", separatorAfter: true),
@@ -94,7 +96,7 @@ public enum TorrentRowMenu {
             return torrents.contains { $0.hashString?.isEmpty == false }
         case .showInFinder:
             return torrents.allSatisfy { $0.downloadDir?.isEmpty == false }
-        case .move, .removeKeepData, .removeWithData:
+        case .move, .editProperties, .removeKeepData, .removeWithData:
             return true
         }
     }
