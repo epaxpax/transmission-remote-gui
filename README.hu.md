@@ -137,6 +137,10 @@ python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # 3.00 helyett Transmission 4.x ellen
 ```
 
+Ugyanezek a suite-ok minden pull requestnél a GitHub Actionsön is lefutnak (`UI tests` workflow),
+Apple silicon macOS runneren, natív Transmission 3.00 és 4.x daemon ellen — ott nem kell Docker
+és kézi Accessibility-engedély (a runnert a `Scripts/uitest/ci-*.sh` készíti elő).
+
 ### Tesztelés valódi daemonnal
 
 ```sh

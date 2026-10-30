@@ -86,6 +86,11 @@ def teardown():
 
 
 def ensure_daemon():
+    try:
+        rpc("session-get")   # already up (e.g. a native daemon on the CI runner)
+        return
+    except Exception:
+        pass
     if sh("docker", "start", DAEMON, check=False).returncode != 0:
         sh("docker", "run", "-d", "--name", DAEMON, "-p", f"{PORT}:9091", IMAGE)
     for _ in range(30):
@@ -274,6 +279,28 @@ def id_exists(identifier, scope="window 1"):
         return True
     except RuntimeError:
         return False
+
+def close_finder_windows():
+    """Before a "Show in Finder": a fresh Finder may open the next reveal in a NEW window behind
+    the old one, and `get selection` would then still report the previous item."""
+    try:
+        osa('tell application "Finder" to close every window')
+    except RuntimeError:
+        pass
+
+def wait_finder_selection(expected, timeout=15):
+    """Waits until Finder's selection is `expected` (a path); the failure names what Finder had."""
+    seen = []
+    def selected():   # empty until Finder has come forward with the selection
+        try:
+            seen.append(osa('tell application "Finder" to get POSIX path of (item 1 of (get selection) as alias)'))
+        except RuntimeError as e:
+            seen.append(f"error: {e}")
+        return seen[-1].rstrip("/") == str(expected).rstrip("/")
+    try:
+        wait_for(selected, timeout=timeout, what="Finder selection")
+    except AssertionError:
+        raise AssertionError(f"Finder selection is not {expected} (last seen: {seen[-1] if seen else '-'})")
 
 def id_value(identifier, scope="window 1"):
     return ax_id(identifier, "return value of e", scope)

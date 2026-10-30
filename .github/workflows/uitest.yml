@@ -1,0 +1,113 @@
+name: UI tests
+
+# GUI suites (Scripts/uitest) on a GitHub-hosted macOS runner, against a throw-away daemon.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uitest:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - daemon: tr4
+          - daemon: tr3
+    # Apple-silicon only: on the Intel image the app aborts in Metal (paravirtual GPU).
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      UITEST_DAEMON: ${{ matrix.daemon }}
+      # Rule-list drag/reorder and Ctrl+click → Move are timing-sensitive on the hosted runner;
+      # they still run (later cases build on them) and are covered by the local pre-release run.
+      UITEST_TOLERATE: "13.,13b.,15b."
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Swift 6 toolchain (latest Xcode)
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+
+      - name: Transmission 3.00 (cached source build)
+        if: matrix.daemon == 'tr3'
+        id: tr3cache
+        uses: actions/cache@v4
+        with:
+          path: ~/tr300
+          key: transmission-3.00-${{ runner.os }}-${{ runner.arch }}-v2
+
+      - name: Build Transmission 3.00 daemon
+        if: matrix.daemon == 'tr3' && steps.tr3cache.outputs.cache-hit != 'true'
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"   # 3.00's bundled third-party CMake files predate CMake 4
+        run: |
+          brew install libevent >/dev/null
+          curl -sSfL https://github.com/transmission/transmission/releases/download/3.00/transmission-3.00.tar.xz | tar -xJ
+          cmake -S transmission-3.00 -B tr-build -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_DAEMON=ON -DENABLE_GTK=OFF -DENABLE_QT=OFF -DENABLE_MAC=OFF -DENABLE_CLI=OFF \
+            -DENABLE_UTILS=OFF -DENABLE_TESTS=OFF -DINSTALL_DOC=OFF -DWITH_CRYPTO=openssl -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+            -DUSE_SYSTEM_EVENT2=ON -DCMAKE_PREFIX_PATH="$(brew --prefix libevent)" -DCMAKE_INSTALL_PREFIX="$HOME/tr300"
+          cmake --build tr-build -j4 --target transmission-daemon
+          mkdir -p ~/tr300/bin && cp tr-build/daemon/transmission-daemon ~/tr300/bin/
+
+      - name: Test daemon
+        run: |
+          if [ "$UITEST_DAEMON" = tr3 ]; then BIN=~/tr300/bin/transmission-daemon; PORT=9099
+          else brew install transmission-cli >/dev/null; BIN=transmission-daemon; PORT=9098; fi
+          [ "$UITEST_DAEMON" = tr3 ] && brew install libevent >/dev/null   # the cached 3.00 binary links it
+          D="$RUNNER_TEMP/tr"; mkdir -p "$D/dl"
+          "$BIN" -V 2>&1 | head -1 || true
+          nohup "$BIN" -f -g "$D" -w "$D/dl" -p $PORT -T --logfile "$D/daemon.log" >"$D/stdout.log" 2>&1 &
+          for i in $(seq 30); do curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:$PORT/transmission/rpc | grep -q 409 && exit 0; sleep 1; done
+          cat "$D/"*.log; exit 1
+
+      - name: Build app
+        run: ./Scripts/build-app.sh
+
+      - name: UI-test helper + Accessibility grant
+        run: |
+          bash Scripts/uitest/helper/build-helper.sh
+          bash Scripts/uitest/ci-grant-tcc.sh
+          python3 -c 'import sys; sys.path.insert(0,"Scripts/uitest"); import trgui_uitest as ui, os; os.makedirs(ui.WORK, exist_ok=True); print("AX enabled:", ui.ax_enabled())'
+
+      - name: Screen — 1080p
+        run: |
+          brew install displayplacer coreutils >/dev/null   # coreutils: `timeout` for the suites
+          id=$(displayplacer list | awk '/Persistent screen id/{print $4; exit}')
+          displayplacer "id:$id res:1920x1080 hz:60 color_depth:7 scaling:off origin:(0,0) degree:0" || true
+          system_profiler SPDisplaysDataType | grep -E 'Resolution' || true
+
+      - name: UI suites
+        run: |
+          fail=()
+          mkdir -p "$RUNNER_TEMP/diag"
+          Scripts/uitest/ci-dismiss-prompts.sh &
+          trap 'Scripts/uitest/ci-dismiss-prompts.sh --stop' EXIT
+          for t in ${SUITES:-Scripts/uitest/test_*.py}; do
+            echo "::group::$t"
+            if timeout 600 python3 "$t"; then echo "PASS $t"; else echo "FAIL $t"; fail+=("$(basename "$t")")
+              screencapture -x "$RUNNER_TEMP/diag/$(basename "$t" .py).png" || true; fi
+            echo "::endgroup::"
+          done
+          [ ${#fail[@]} -eq 0 ] || { echo "::error::failed suites: ${fail[*]}"; exit 1; }
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/diag"
+          screencapture -x "$RUNNER_TEMP/diag/screen.png" || true
+          sleep 5   # let ReportCrash finish writing
+          cp ~/Library/Logs/DiagnosticReports/{TRGUIUITest,transmission-daemon}* "$RUNNER_TEMP/diag/" 2>/dev/null || true
+          cp "$RUNNER_TEMP"/tr/*.log "$RUNNER_TEMP/diag/" 2>/dev/null || true
+          log show --last 10m --style compact --predicate 'process == "TRGUIUITest"' > "$RUNNER_TEMP/diag/app.log" 2>&1 || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: uitest-${{ matrix.daemon }}
+          path: ${{ runner.temp }}/diag
+          if-no-files-found: ignore

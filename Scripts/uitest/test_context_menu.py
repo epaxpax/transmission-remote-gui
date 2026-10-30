@@ -6,6 +6,9 @@ import trgui_uitest as ui
 
 APP = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ui.ROOT, "dist", "Transmission Remote GUI.app")
 T = "table 1 of scroll area 1 of group 1 of splitter group 1 of group 2 of splitter group 1 of group 1 of window 1"
+SA = T.removeprefix("table 1 of ")
+SCREEN_W = float(ui.sh("osascript", "-l", "JavaScript", "-e",
+                       'ObjC.import("AppKit"); $.NSScreen.mainScreen.frame.size.width').stdout)
 failed = []
 ui.setup(APP)
 try:
@@ -18,6 +21,9 @@ try:
     heads = ui.ax(f"get title of every button of group 1 of {T}").split(", ")
     for i in range(1, int(ui.ax(f"count UI elements of row 1 of {T}")) + 1):
         x, y = ui.position(f"UI element {i} of row 1 of {T}")
+        if x > SCREEN_W - 20:   # narrower screen (CI runner: 1920 px): scroll the cell into view
+            ui.ax(f'set value of (value of attribute "AXHorizontalScrollBar" of {SA}) to 1.0'); time.sleep(0.5)
+            x, y = ui.position(f"UI element {i} of row 1 of {T}")
         for ctrl in (False, True):
             ui.activate()
             ui.context_menu_pick(x, y, ui.KEY_MOVE, ctrl=ctrl)

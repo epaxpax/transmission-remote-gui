@@ -144,7 +144,7 @@ def main():
         time.sleep(4)   # several detail refreshes
         check("expanded state survives the refresh", exists("files.row.Show/S01/e03.mkv"))
 
-        check("folder checkbox: mixed when partly wanted", value("files.wanted.Show/") == "2",
+        check("folder checkbox: mixed when partly wanted", value("files.wanted.Show/") in ("2", "-1"),   # mixed: macOS 15 AX reports -1
               value("files.wanted.Show/"))
         check("folder checkbox: on when all wanted", value("files.wanted.Show/S01/") == "1")
         check("folder priority: mixed", value("files.priority.Show/") == "Mixed", value("files.priority.Show/"))
@@ -170,14 +170,10 @@ def main():
         for identifier, expected in [("files.row.Show/S01/e01.mkv", share / "media" / "Show/S01/e01.mkv"),
                                      ("files.row.Show/Extras/", share / "media" / "Show/Extras")]:
             x, y = centre(identifier)
+            ui.close_finder_windows()
             ui.context_menu_pick(x, y, ui.KEY_SHOW)
 
-            def selected():   # empty until Finder has come forward with the selection
-                try:
-                    return ui.osa('tell application "Finder" to get POSIX path of (item 1 of (get selection) as alias)')
-                except RuntimeError:
-                    return ""
-            ui.wait_for(lambda: selected().rstrip("/") == str(expected), what="Finder selection")
+            ui.wait_finder_selection(expected)
             check(f"Show in Finder: {identifier}", True)
             ui.activate(); time.sleep(1)
 

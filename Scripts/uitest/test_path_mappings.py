@@ -99,13 +99,9 @@ def main():
             ui.activate()
             for row, expected in [(1, folder), (2, movie)]:
                 x, y = ui.position(f"UI element 1 of row {row} of {table}")
+                ui.close_finder_windows()
                 ui.context_menu_pick(x, y, ui.KEY_SHOW)
-                def selected():   # empty until Finder has come forward with the selection
-                    try:
-                        return ui.osa('tell application "Finder" to get POSIX path of (item 1 of (get selection) as alias)')
-                    except RuntimeError:
-                        return ""
-                ui.wait_for(lambda: selected().rstrip("/") == str(expected), what="Finder selection")
+                ui.wait_finder_selection(expected)
                 print(f"PASS: Finder {'folder' if row == 1 else 'Unicode single file'}", flush=True)
             assert not blocked, f"unexpected mutating RPC methods: {blocked}"
             print("PASS: only read-only RPC methods used", flush=True)
