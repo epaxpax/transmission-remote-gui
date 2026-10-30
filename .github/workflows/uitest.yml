@@ -58,7 +58,14 @@ jobs:
         run: |
           if [ "$UITEST_DAEMON" = tr3 ]; then BIN=~/tr300/bin/transmission-daemon; PORT=9099
           else brew install transmission-cli >/dev/null; BIN=transmission-daemon; PORT=9098; fi
-          [ "$UITEST_DAEMON" = tr3 ] && brew install libevent >/dev/null   # the cached 3.00 binary links it
+          if [ "$UITEST_DAEMON" = tr3 ]; then
+            brew install libevent >/dev/null   # the cached 3.00 binary links it
+            # 3.00 needs RC4 for encrypted peers; OpenSSL 3 only has it in the legacy provider
+            # (without it the daemon segfaults in tr_rc4_set_key on the first such peer).
+            printf '%s\n' 'openssl_conf = init' '[init]' 'providers = prov' '[prov]' 'default = on' 'legacy = on' \
+              '[on]' 'activate = 1' > "$RUNNER_TEMP/openssl-legacy.cnf"
+            export OPENSSL_CONF="$RUNNER_TEMP/openssl-legacy.cnf"
+          fi
           D="$RUNNER_TEMP/tr"; mkdir -p "$D/dl"
           "$BIN" -V 2>&1 | head -1 || true
           nohup "$BIN" -f -g "$D" -w "$D/dl" -p $PORT -T --logfile "$D/daemon.log" >"$D/stdout.log" 2>&1 &
