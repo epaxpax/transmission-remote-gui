@@ -7,6 +7,10 @@ import Foundation
 public enum TorrentRowCommand: String, CaseIterable, Sendable {
     case start
     case stop
+    case queueTop
+    case queueUp
+    case queueDown
+    case queueBottom
     case move
     case rename
     case editProperties
@@ -42,6 +46,10 @@ public enum TorrentRowMenu {
         Entry(command: .editProperties, titleKey: "Tulajdonságok…", separatorAfter: true),
         Entry(command: .verify, titleKey: "Ellenőrzés (verify)", separatorAfter: false),
         Entry(command: .reannounce, titleKey: "Újrabejelentés a trackernek", separatorAfter: true),
+        Entry(command: .queueTop, titleKey: "Sor elejére", separatorAfter: false),
+        Entry(command: .queueUp, titleKey: "Feljebb a sorban", separatorAfter: false),
+        Entry(command: .queueDown, titleKey: "Lejjebb a sorban", separatorAfter: false),
+        Entry(command: .queueBottom, titleKey: "Sor végére", separatorAfter: true),
         Entry(command: .showInFinder, titleKey: "Megjelenítés a Finderben", separatorAfter: true),
         Entry(command: .copyName, titleKey: "Név másolása", separatorAfter: false),
         Entry(command: .copyHash, titleKey: "Hash másolása", separatorAfter: true),
@@ -96,7 +104,7 @@ public enum TorrentRowMenu {
             return torrents.contains { $0.hashString?.isEmpty == false }
         case .showInFinder:
             return torrents.allSatisfy { $0.downloadDir?.isEmpty == false }
-        case .move, .editProperties, .removeKeepData, .removeWithData:
+        case .queueTop, .queueUp, .queueDown, .queueBottom, .move, .editProperties, .removeKeepData, .removeWithData:
             return true
         }
     }

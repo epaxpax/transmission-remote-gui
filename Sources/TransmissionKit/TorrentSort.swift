@@ -26,6 +26,7 @@ public enum TorrentSort {
             }
         }
         if kp == \Torrent.statusSortKey    { return by { $0.statusSortKey } }
+        if kp == \Torrent.queuePositionSortKey { return by { $0.queuePositionSortKey } }
         if kp == \Torrent.sizeSortKey      { return by { $0.sizeSortKey } }
         if kp == \Torrent.progress         { return by { $0.progress } }
         if kp == \Torrent.downloadRate     { return by { $0.downloadRate } }

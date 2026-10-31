@@ -93,6 +93,10 @@ struct TorrentTableView: NSViewRepresentable {
                    color: { _ in .secondaryLabelColor },
                    comparator: { KeyPathComparator(\Torrent.activityDateSortKey, order: $0 ? .forward : .reverse) }),
         // Optional columns — hidden until enabled from the header's right-click menu.
+        ColumnSpec(id: "queue", title: "Sorpozíció", width: 92, minWidth: 60,
+                   alignment: .right, monospaced: true, defaultVisible: false,
+                   text: { $0.queuePositionText },
+                   comparator: { KeyPathComparator(\Torrent.queuePositionSortKey, order: $0 ? .forward : .reverse) }),
         ColumnSpec(id: "done", title: "Befejezve", width: 130, minWidth: 90, monospaced: true, defaultVisible: false,
                    text: { $0.doneDateValue.map(dateFormatter.string(from:)) ?? "—" },
                    color: { _ in .secondaryLabelColor },

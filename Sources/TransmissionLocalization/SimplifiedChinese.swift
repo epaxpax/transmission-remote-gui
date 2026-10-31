@@ -5,6 +5,12 @@
 /// Terminology follows the Simplified Chinese translation in the original transgui
 /// project where the concepts overlap.
 let simplifiedChineseStrings: [String: String] = [
+    // Download queue
+    "Sorpozíció": "队列位置",
+    "Sor elejére": "移到顶部",
+    "Feljebb a sorban": "上移",
+    "Lejjebb a sorban": "下移",
+    "Sor végére": "移到底部",
     // General actions and errors
     "Hozzáadás": "添加",
     "Indítás": "开始",
