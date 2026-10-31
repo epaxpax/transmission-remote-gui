@@ -17,6 +17,8 @@ public struct Torrent: Codable, Identifiable, Hashable, Sendable {
     public var isFinished: Bool?
     public var isStalled: Bool?
     public var recheckProgress: Double?
+    /// Zero-based position in the daemon's queue, independent of table sorting.
+    public var queuePosition: Int?
 
     // Size / progress
     public var totalSize: Int?
@@ -157,6 +159,17 @@ public extension Torrent {
 
     /// Raw status code for sorting by state (0=stopped … 6=seeding).
     var statusSortKey: Int { status ?? 0 }
+
+    /// Missing / invalid positions use a high sentinel and display as unknown, not as 1.
+    var queuePositionSortKey: Int {
+        guard let queuePosition, queuePosition >= 0 else { return Int.max }
+        return queuePosition
+    }
+
+    var queuePositionText: String {
+        guard let queuePosition, queuePosition >= 0, queuePosition < Int.max else { return "—" }
+        return String(queuePosition + 1)
+    }
 
     /// For sorting by displayed size (size when done, otherwise total).
     var sizeSortKey: Int { sizeWhenDone ?? totalSize ?? 0 }

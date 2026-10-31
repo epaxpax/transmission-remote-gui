@@ -149,6 +149,25 @@ for language in AppLanguage.allCases {
 }
 
 print("\nTorrent statuses (separate from labels)")
+for entry in TorrentRowMenu.layout {
+    t.test("Row menu command translated: \(entry.command)") {
+        try t.expect(englishPack.strings[entry.titleKey] != nil, "Missing English menu title")
+        try t.expect(simplifiedChinesePack.strings[entry.titleKey] != nil, "Missing Chinese menu title")
+    }
+}
+for (key, english, chinese) in [
+    ("Sorpozíció", "Queue Position", "队列位置"),
+    ("Sor elejére", "Move to Top", "移到顶部"),
+    ("Feljebb a sorban", "Move Up", "上移"),
+    ("Lejjebb a sorban", "Move Down", "下移"),
+    ("Sor végére", "Move to Bottom", "移到底部"),
+] {
+    t.test("Queue title in all languages: \(key)") {
+        l10n.language = .english; try t.equal(l10n.text(key), english)
+        l10n.language = .simplifiedChinese; try t.equal(l10n.text(key), chinese)
+        l10n.language = .hungarian; try t.equal(l10n.text(key), key)
+    }
+}
 let statuses: [(Torrent.Status, String, String)] = [
     (.stopped, "Stopped", "已停止"), (.queuedToVerify, "Queued to verify", "等待校验"),
     (.verifying, "Verifying", "校验"), (.queuedToDownload, "Queued to download", "等待下载"),

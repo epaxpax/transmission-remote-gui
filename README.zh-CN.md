@@ -21,6 +21,7 @@
 ## 功能
 
 - 种子列表包含名称、状态、完成进度、大小、↓/↑ 速率、预计剩余时间（ETA）、分享率、节点、添加时间和**最后活动**等列，支持快速的原生排序
+- **调整下载队列顺序**：右键选中的种子，可选择“移到顶部／上移／下移／移到底部”，支持多选。可选的**队列位置**列默认隐藏，从 1 开始显示并按数值排序；仅调整列表显示顺序不会改变服务端的队列。
 - **自定义列**：右键点击列表表头即可显示或隐藏各列——还可显示完成时间、剩余大小、已下载、已上传、下载文件夹、**做种者／下载者**（已连接数量及 Tracker 报告的种群总数，例如 `3 (120)`）、Tracker 和标签；列顺序、宽度和显示状态会被保存，可通过*默认列*恢复
 - 侧边栏筛选器显示种子数量（全部／下载中／完成／活动／空闲／已停止／错误），并提供带数量的 **Tracker**、**下载文件夹**和 **标签（分类）** 筛选——这些筛选可以相互组合，也可与状态筛选组合；每个分组的 **全部……** 行（或再次点击已选中的行）只清除该分组的筛选条件
 - 在列表中搜索
@@ -134,6 +135,7 @@ App 会安装到 `/Applications`。应用采用 ad-hoc 签名（未经公证）�
 python3 Scripts/uitest/test_open_with.py       # 打开方式／Magnet 链接
 python3 Scripts/uitest/test_context_menu.py    # 在每一列中测试种子行的右键菜单
 python3 Scripts/uitest/test_columns.py         # 表头菜单：列显示／隐藏、持久化、恢复默认
+python3 Scripts/uitest/test_queue.py           # 队列调整、多选及筛选／排序后的操作（tr3 和 tr4）
 python3 Scripts/uitest/test_filters.py         # 侧边栏 Tracker／文件夹筛选，以及“全部”行
 python3 Scripts/uitest/test_peers.py           # 节点标签页：旗帜、排序（通过本地代理提供虚构节点）
 python3 Scripts/uitest/test_path_mappings.py   # 通过路径映射在 Finder 中显示（本地模拟服务器）
@@ -152,7 +154,6 @@ transmission-daemon --foreground --port 9091
 
 ## 后续计划
 
-- 调整下载队列顺序
 - 添加／删除 Tracker
 - 监视文件夹（Watch folder）
 - 支持 JSON-RPC 2.0（Transmission 4.1+）
