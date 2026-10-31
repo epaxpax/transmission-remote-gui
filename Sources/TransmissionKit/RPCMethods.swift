@@ -6,7 +6,7 @@ public enum TorrentFields {
     /// Fields sufficient for the list view.
     public static let list: [String] = [
         "id", "name", "hashString", "status", "error", "errorString",
-        "isFinished", "isStalled", "recheckProgress",
+        "isFinished", "isStalled", "recheckProgress", "queuePosition",
         "totalSize", "sizeWhenDone", "leftUntilDone", "percentDone",
         "uploadedEver", "downloadedEver", "uploadRatio",
         "rateDownload", "rateUpload", "eta",
@@ -326,6 +326,13 @@ public extension RPCClient {
 
     func torrentReannounce(ids: RPCIds) async throws {
         let _: EmptyArgs = try await sendAction(method: "torrent-reannounce", ids: ids)
+    }
+
+    /// One daemon operation for the entire selection; the daemon preserves relative order.
+    func queueMove(_ move: QueueMove, ids: RPCIds) async throws {
+        // An empty selection must never turn into an operation on every torrent.
+        if case .ids(let identifiers) = ids, identifiers.isEmpty { return }
+        let _: EmptyArgs = try await sendAction(method: move.rawValue, ids: ids)
     }
 
     func torrentRemove(ids: RPCIds, deleteLocalData: Bool) async throws {

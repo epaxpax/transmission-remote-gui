@@ -1214,5 +1214,6 @@ await testPathMappings(t)
 await testDownloadDirectories(t)
 await testTorrentProperties(t)
 await testFileTree(t)
+await testQueue(t)
 
 exit(Int32(t.summary()))

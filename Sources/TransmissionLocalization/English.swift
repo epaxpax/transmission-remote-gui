@@ -1,5 +1,11 @@
 /// Hungarian source keys → English UI strings.
 let englishStrings: [String: String] = [
+    // Download queue (separate from bandwidth priority and table sorting)
+    "Sorpozíció": "Queue Position",
+    "Sor elejére": "Move to Top",
+    "Feljebb a sorban": "Move Up",
+    "Lejjebb a sorban": "Move Down",
+    "Sor végére": "Move to Bottom",
     // General actions / toolbar
     "Hozzáadás": "Add",
     "Indítás": "Start",

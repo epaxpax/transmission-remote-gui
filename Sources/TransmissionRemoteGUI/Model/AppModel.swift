@@ -643,6 +643,11 @@ final class AppModel {
         await perform { try await $0.torrentReannounce(ids: ids ?? self.selectionIDs) }
     }
 
+    /// Refresh from the daemon after moving; table sorting is left unchanged.
+    func moveInQueue(_ move: QueueMove, ids: RPCIds) async {
+        await perform { try await $0.queueMove(move, ids: ids) }
+    }
+
     /// Move the given (or selected) torrents' data to `location`.
     /// With `move: false` only the recorded location changes — use it when the files
     /// were already moved by other means.

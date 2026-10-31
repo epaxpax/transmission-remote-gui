@@ -20,6 +20,7 @@ tiszta lapról írt macOS-újragondolása.
 - **Letöltési mappa választása** a hozzáadás ablakban — szerveroldali útvonal csak az adott torrenthez (alapból a daemon letöltési mappája, ami nem változik), szerverenkénti **kedvenc** és **legutóbb használt** mappákkal
 - **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
 - Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
+- **Letöltési sor átrendezése**: a kijelölt torrentek jobbklikk-menüjében *Sor elejére / Feljebb a sorban / Lejjebb a sorban / Sor végére*. Az opcionális **Sorpozíció** oszlop (alapból rejtett) 1-től számoz és számsorrendben rendez; a táblázat rendezése önmagában nem módosítja a daemon sorát.
 - **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
 - **Tulajdonságok csoportos szerkesztése** a kijelölt torrenteken (jobb klikk → *Tulajdonságok…*): letöltési / feltöltési korlát, a globális sebességkorlátok figyelembevétele, sávszélesség-prioritás, peer-limit és címkék. Ahol a torrentek eltérnek, *Vegyes* látszik; semmi sem változik, amit nem módosítasz. A címkék **hozzáadhatók / eltávolíthatók** (a többi címke megmarad) vagy **teljes listaként cserélhetők** (címkékhez Transmission 3.00+ kell)
 - **Részletek panel** (⌘I) tabokkal: **Általános / Fájlok / Peerek / Trackerek**; peerek **országzászlóval** (beépített, offline országadat — lásd [Peerek](#peerek)), a Peerek és Trackerek fül minden oszlopa **rendezhető**, a címek számsorrendben; **fájlok mappafában**: kibontható/összecsukható mappák összesített mérettel és haladással, a mappa jelölőnégyzete (részleges kijelölésnél vegyes) és prioritása egyetlen hívással a benne lévő összes fájlra hat, egy fájl vagy mappa **megjeleníthető a Finderben**, ha van rá útvonal-hozzárendelés; **torrentenkénti sebességkorlát**; **címkék/kategóriák** szerkesztése
@@ -127,6 +128,7 @@ python3 Scripts/uitest/test_open_with.py       # Megnyitás / magnet linkek
 python3 Scripts/uitest/test_context_menu.py    # sor-menü minden oszlopon
 python3 Scripts/uitest/test_properties.py      # csoportos tulajdonság-szerkesztő: vegyes értékek, csak a módosított mező megy ki
 python3 Scripts/uitest/test_columns.py         # fejléc-menü: oszlopok ki/be, megmaradás, visszaállítás
+python3 Scripts/uitest/test_queue.py           # sormozgatás, többes kijelölés, szűrt/rendezett lista (tr3 + tr4)
 python3 Scripts/uitest/test_filters.py         # sidebar tracker- / mappaszűrők, „Összes” sorok
 python3 Scripts/uitest/test_peers.py           # Peerek fül: zászlók, rendezés (kitalált peerek helyi proxyn át)
 python3 Scripts/uitest/test_path_mappings.py   # Megjelenítés a Finderben útvonal-hozzárendeléssel (helyi mock szerver)
@@ -151,7 +153,6 @@ transmission-daemon --foreground --port 9091
 
 ## Későbbi lehetőségek
 
-- Letöltési sor (queue) mozgatás
 - Tracker hozzáadás / törlés
 - Watch-folder
 - JSON-RPC 2.0 (Transmission 4.1+) támogatás

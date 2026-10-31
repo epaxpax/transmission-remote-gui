@@ -95,6 +95,14 @@ struct TorrentListView: View {
             Task { await model.start(ids: ids) }
         case .stop:
             Task { await model.stop(ids: ids) }
+        case .queueTop:
+            Task { await model.moveInQueue(.top, ids: ids) }
+        case .queueUp:
+            Task { await model.moveInQueue(.up, ids: ids) }
+        case .queueDown:
+            Task { await model.moveInQueue(.down, ids: ids) }
+        case .queueBottom:
+            Task { await model.moveInQueue(.bottom, ids: ids) }
         case .verify:
             Task { await model.verify(ids: ids) }
         case .reannounce:

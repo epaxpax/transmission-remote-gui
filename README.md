@@ -23,6 +23,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Customizable columns**: right-click the list header to show/hide columns — extra ones: completed on, remaining, downloaded, uploaded, download folder, **seeds / leechers** (connected, and the swarm size the trackers report — e.g. `3 (120)`), tracker, labels; order, widths and visibility are remembered, *Default Columns* resets them
 - Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **tracker**, **download folder** and **label (category)** filters with counts — they combine with each other and the status filter; each section's **All …** row (or clicking the selected row again) clears just that filter
 - Search within the list
+- **Download queue reordering**: right-click selected torrents → *Move to Top / Move Up / Move Down / Move to Bottom*. The optional **Queue Position** column (hidden by default) shows 1-based positions and sorts numerically; sorting the table alone never changes the daemon's queue.
 - Add torrents via **magnet link / URL**, **`.torrent` file**, or **drag & drop** onto the window
 - **Choose the download folder** in the Add dialog — a daemon-side path for that torrent only (defaults to the daemon's download folder, which stays unchanged), with per-server **favorite** and **recently used** folders
 - **Open With / double-click** a `.torrent` in Finder, or click a **magnet link** in the browser — added to the current server (queued until connected if the app was closed), without extra windows
@@ -138,6 +139,7 @@ python3 Scripts/uitest/test_open_with.py       # Open With / magnet links
 python3 Scripts/uitest/test_context_menu.py    # row context menu on every column
 python3 Scripts/uitest/test_properties.py      # batch property editor: mixed values, only edited fields sent
 python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns, persistence, reset
+python3 Scripts/uitest/test_queue.py           # queue moves, multi-selection, filtered/sorted lists (tr3 + tr4)
 python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filters, "All" rows
 python3 Scripts/uitest/test_peers.py           # Peers tab: flags, sorting (made-up peers via a local proxy)
 python3 Scripts/uitest/test_path_mappings.py   # Show in Finder via path mappings (local mock server)
@@ -162,7 +164,6 @@ transmission-daemon --foreground --port 9091
 
 ## Roadmap
 
-- Download queue reordering
 - Tracker add / remove
 - Watch folder
 - JSON-RPC 2.0 (Transmission 4.1+) support
