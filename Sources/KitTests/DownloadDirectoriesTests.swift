@@ -4,6 +4,19 @@ import TransmissionKit
 func testDownloadDirectories(_ t: TestHarness) async {
     print("\nAdd dialog download directories")
 
+    await t.test("Mapped destinations use remote roots, deduplicate and reject relative paths") {
+        let mappings = [
+            PathMapping(remotePath: "/downloads/", localPath: "/Volumes/TestShare/downloads"),
+            PathMapping(remotePath: "/movies", localPath: "/Volumes/TestShare/movies"),
+            PathMapping(remotePath: " /movies/ ", localPath: "/Volumes/Duplicate"),
+            PathMapping(remotePath: "/shows", localPath: "/Volumes/TestShare/shows"),
+            PathMapping(remotePath: "relative", localPath: "/Volumes/Invalid"),
+            PathMapping(remotePath: "", localPath: "/Volumes/Empty"),
+        ]
+        try t.expectEqual(DownloadDirectories.mappedDestinations(mappings), ["/downloads", "/movies", "/shows"])
+        try t.expectEqual(DownloadDirectories.mappedDestinations([]), [])
+    }
+
     await t.test("History: most recent first, deduplicated, trailing slash and whitespace ignored") {
         var dirs = DownloadDirectories()
         dirs.recordUsed("/srv/a")

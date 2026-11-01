@@ -744,6 +744,19 @@ await t.test("Queue keeps order, drops duplicates and drains exactly once") {
     try t.expectEqual(q.drain(), [])
 }
 
+await t.test("Confirmation queue takes one torrent at a time and leaves the rest pending") {
+    var q = IncomingQueue()
+    let file = IncomingTorrent.file(URL(fileURLWithPath: "/tmp/confirm.torrent"))
+    q.enqueue([file, .link("magnet:?a"), file])
+    try t.expectEqual(q.popFirst(), file)
+    try t.expectEqual(q.pending, [.link("magnet:?a")])
+    try t.expectEqual(q.popFirst(), .link("magnet:?a"))
+    try t.expectEqual(q.popFirst(), nil)
+    q.enqueue([file])
+    _ = q.drain() // switching servers discards queued confirmations
+    try t.expectEqual(q.popFirst(), nil)
+}
+
 print("\nTracker + rule-mezők dekódolása")
 
 await t.test("Tracker matchHosts a sitename-et ÉS az announce hostot is kínálja (4.0+)") {

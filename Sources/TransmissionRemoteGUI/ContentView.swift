@@ -4,7 +4,6 @@ import TransmissionKit
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
-    @State private var showingAdd = false
     @State private var showingStats = false
     @State private var showingRSS = false
     @State private var showingRules = false
@@ -32,8 +31,8 @@ struct ContentView: View {
             }
         }
         .toolbar { toolbarContent }
-        .sheet(isPresented: $showingAdd) {
-            AddTorrentView()
+        .sheet(item: $model.addRequest, onDismiss: { model.presentNextIncoming() }) { request in
+            AddTorrentView(incoming: request.incoming)
         }
         .sheet(isPresented: $showingStats) {
             StatisticsView().environment(model)
@@ -64,7 +63,7 @@ struct ContentView: View {
         .task { model.autoConnectIfNeeded() }   // connect to the most recent server at launch
     }
 
-    /// Adds a dragged-in `.torrent` file / magnet link / URL. Calls the existing add API.
+    /// Dragged files and links use the same destination confirmation as Finder/browser opens.
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard model.isConnected else { return false }
         var handled = false
@@ -73,19 +72,19 @@ struct ContentView: View {
                 handled = true
                 _ = provider.loadObject(ofClass: URL.self) { url, _ in
                     guard let url, url.isFileURL, let item = IncomingTorrent.classify(url) else { return }
-                    Task { @MainActor in await model.add(item) }
+                    Task { @MainActor in model.enqueueIncoming([item]) }
                 }
             } else if provider.canLoadObject(ofClass: URL.self) {
                 handled = true
                 _ = provider.loadObject(ofClass: URL.self) { url, _ in
                     guard let url, let item = IncomingTorrent.classify(url) else { return }
-                    Task { @MainActor in await model.add(item) }
+                    Task { @MainActor in model.enqueueIncoming([item]) }
                 }
             } else if provider.canLoadObject(ofClass: String.self) {
                 handled = true
                 _ = provider.loadObject(ofClass: String.self) { text, _ in
                     guard let text, let item = IncomingTorrent.classify(text: text) else { return }
-                    Task { @MainActor in await model.add(item) }
+                    Task { @MainActor in model.enqueueIncoming([item]) }
                 }
             }
         }
@@ -96,7 +95,7 @@ struct ContentView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup {
             Button {
-                showingAdd = true
+                model.showAddTorrent()
             } label: {
                 Label(loc("Hozzáadás"), systemImage: "plus")
             }

@@ -9,8 +9,18 @@ struct AddTorrentView: View {
     @State private var magnet = ""
     @State private var paused = false
     @State private var fileImporter = false
+    @State private var torrentFile: URL?
+    @State private var isAdding = false
     /// Daemon-side destination for this torrent only; prefilled with the daemon's default.
     @State private var downloadDir = ""
+
+    init(incoming: IncomingTorrent? = nil) {
+        switch incoming {
+        case .file(let url): _torrentFile = State(initialValue: url)
+        case .link(let value): _magnet = State(initialValue: value)
+        case nil: break
+        }
+    }
 
     /// The field may be empty (= daemon default), otherwise it must be an absolute daemon path.
     private var downloadDirIsValid: Bool {
@@ -28,11 +38,18 @@ struct AddTorrentView: View {
             Text(loc("Torrent hozzáadása")).font(.title2.bold())
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(loc("Magnet link vagy URL")).font(.callout).foregroundStyle(.secondary)
-                TextField("magnet:?xt=… vagy https://…", text: $magnet, axis: .vertical)
-                    .lineLimit(2...4)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityIdentifier("add.magnet")
+                if let torrentFile {
+                    Text(torrentFile.lastPathComponent)
+                        .lineLimit(2)
+                        .accessibilityIdentifier("add.file")
+                    Button(loc("Magnet link vagy URL")) { self.torrentFile = nil }
+                } else {
+                    Text(loc("Magnet link vagy URL")).font(.callout).foregroundStyle(.secondary)
+                    TextField("magnet:?xt=… vagy https://…", text: $magnet, axis: .vertical)
+                        .lineLimit(2...4)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("add.magnet")
+                }
             }
 
             downloadDirSection
@@ -43,7 +60,6 @@ struct AddTorrentView: View {
                 } label: {
                     Label(loc(".torrent fájl választása"), systemImage: "doc.badge.plus")
                 }
-                .disabled(!downloadDirIsValid)
                 Spacer()
                 Toggle(loc("Leállítva add hozzá"), isOn: $paused)
             }
@@ -55,21 +71,16 @@ struct AddTorrentView: View {
                 Button(loc("Mégse")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button(loc("Hozzáadás")) {
-                    let value = magnet.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !value.isEmpty, downloadDirIsValid else { return }
-                    let target = resolvedDownloadDir()
-                    Task {
-                        if await model.add(filename: value, paused: paused, downloadDir: target.dir) {
-                            target.record()
-                        }
-                        dismiss()
-                    }
+                    submit()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(magnet.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !downloadDirIsValid)
+                .disabled((torrentFile == nil && magnet.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                          || !downloadDirIsValid || !model.isConnected)
                 .accessibilityIdentifier("add.submit")
             }
         }
+        .disabled(isAdding)
+        .interactiveDismissDisabled(isAdding)
         .padding(20)
         .frame(width: 520, height: 350)
         .fileImporter(
@@ -77,7 +88,7 @@ struct AddTorrentView: View {
             allowedContentTypes: [UTType(filenameExtension: "torrent") ?? .data]
         ) { result in
             if case .success(let url) = result {
-                addTorrentFile(url)
+                torrentFile = url
             }
         }
         .onAppear { prefillDownloadDir() }
@@ -110,6 +121,19 @@ struct AddTorrentView: View {
                 .accessibilityLabel(currentDirIsFavorite ? loc("Eltávolítás a kedvencek közül") : loc("Hozzáadás a kedvencekhez"))
                 .accessibilityIdentifier("add.downloadDir.favorite")
                 downloadDirMenu
+            }
+            let mapped = DownloadDirectories.mappedDestinations(model.selectedServer?.pathMappings ?? [])
+            if !mapped.isEmpty {
+                Picker(loc("Mentés ide:"), selection: $downloadDir) {
+                    if !mapped.contains(downloadDir) {
+                        Text(downloadDir.isEmpty ? loc("Alapértelmezett mappa") : downloadDir).tag(downloadDir)
+                    }
+                    ForEach(mapped, id: \.self) { dir in
+                        Text(dir).tag(dir)
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("add.downloadDir.mappings")
             }
             if downloadDirIsValid {
                 Text(loc("Csak ennél a torrentnél — a szerver alapértelmezett mappája nem változik."))
@@ -184,13 +208,24 @@ struct AddTorrentView: View {
         })
     }
 
-    private func addTorrentFile(_ url: URL) {
+    private func submit() {
+        guard !isAdding, model.isConnected, downloadDirIsValid else { return }
+        let value = magnet.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard torrentFile != nil || !value.isEmpty else { return }
         let target = resolvedDownloadDir()
+        isAdding = true
         Task {
-            if await model.addTorrentFile(url, paused: paused, downloadDir: target.dir) {
-                target.record()
+            let added: Bool
+            if let torrentFile {
+                added = await model.addTorrentFile(torrentFile, paused: paused, downloadDir: target.dir)
+            } else {
+                added = await model.add(filename: value, paused: paused, downloadDir: target.dir)
             }
-            dismiss()
+            isAdding = false
+            if added {
+                target.record()
+                dismiss()
+            }
         }
     }
 }
