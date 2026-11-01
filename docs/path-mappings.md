@@ -26,6 +26,12 @@ Mappings are stored with that server in the existing Application Support
 configuration, outside the app bundle, so replacing the app normally preserves
 them. Older configurations without mappings continue to work.
 
+The Add torrent dialog also offers each mapping's **remote folder** in its **Save to**
+menu. Selecting one sets the destination for that torrent only; the daemon's default
+folder stays unchanged. This does not require the local share to be mounted. With no
+mappings, the menu is hidden and you can still enter a server path manually. Finder
+opens, magnet links and drops all show the confirmation dialog before submitting.
+
 ## Reveal a torrent
 
 Right-click a torrent and choose **Show in Finder** (the item is only in the menu

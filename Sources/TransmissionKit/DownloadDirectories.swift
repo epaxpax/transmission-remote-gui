@@ -18,6 +18,11 @@ public struct DownloadDirectories: Codable, Hashable, Sendable {
 
     public var isEmpty: Bool { favorites.isEmpty && recent.isEmpty }
 
+    /// Offer only valid daemon-side roots, never their local Finder counterparts.
+    public static func mappedDestinations(_ mappings: [PathMapping]) -> [String] {
+        deduplicated(mappings.compactMap { TorrentRowMenu.sanitizedLocation($0.remotePath) })
+    }
+
     /// Moves `path` to the front of the history (deduplicated, capped at `recentLimit`).
     public mutating func recordUsed(_ path: String) {
         guard let path = Self.normalized(path) else { return }

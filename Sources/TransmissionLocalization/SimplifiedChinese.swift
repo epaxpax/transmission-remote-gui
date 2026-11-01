@@ -27,7 +27,7 @@ let simplifiedChineseStrings: [String: String] = [
     "Beillesztés…": "粘贴映射…",
     "Importálás": "导入",
     "Távoli útvonal=helyi útvonal, soronként egy.": "远程路径=本地路径，每行一条映射。",
-    "Csak a helyi Finder-megjelenítést érinti. A megosztásokat előbb kézzel csatold.": "仅用于在 Finder 中显示。请先手动挂载共享文件夹。",
+    "A távoli mappák letöltési célként is választhatók. A Finder-megjelenítéshez előbb csatold a megosztásokat.": "远程文件夹也可用作下载目标。要在 Finder 中显示，请先挂载共享文件夹。",
     "Adj meg abszolút távoli és helyi mappákat; a . és .. nem engedélyezett.": "请输入远程和本地文件夹的绝对路径；不允许使用 . 或 ..。",
     "Egy távoli mappához csak egy hozzárendelés tartozhat.": "每个远程文件夹只能配置一条映射。",
     "Érvénytelen fájlútvonal érkezett a szervertől.": "服务器返回的文件路径无效。",
@@ -154,6 +154,7 @@ let simplifiedChineseStrings: [String: String] = [
     // Add / move / rename
     "Torrent hozzáadása": "添加 Torrent",
     "Magnet link vagy URL": "Magnet 链接或 URL",
+    "Mentés ide:": "保存到：",
     ".torrent fájl választása": "选择 .torrent 文件",
     "Leállítva add hozzá": "添加后暂停",
     // Add dialog: per-torrent download folder, favorites and history

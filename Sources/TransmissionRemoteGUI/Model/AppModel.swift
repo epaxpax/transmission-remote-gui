@@ -255,6 +255,7 @@ final class AppModel {
     func connect(to server: ServerConfig) {
         if server.id != incomingServerID { _ = incoming.drain() }
         if server.id != selectedServerID {
+            addRequest = nil
             labelFilter = nil; trackerFilter = nil; folderFilter = nil   // values of the old server
         }
         selectedServerID = server.id
@@ -348,7 +349,7 @@ final class AppModel {
             self.sessionStats = stats
             appendSpeedSample(down: stats.downloadSpeed ?? 0, up: stats.uploadSpeed ?? 0)
             self.connection = .connected
-            await self.addPendingIncoming()
+            self.presentNextIncoming()
             await self.refreshDetail()
             await self.loadFreeSpace()
         } catch is CancellationError {
@@ -728,23 +729,37 @@ final class AppModel {
         await perform { _ = try await $0.torrentAdd(metainfoBase64: metainfoBase64, paused: paused, downloadDir: downloadDir) }
     }
 
-    /// Torrents opened from outside (Finder, browser magnet link) before a connection existed.
+    struct AddTorrentRequest: Identifiable {
+        let id = UUID()
+        var incoming: IncomingTorrent?
+    }
+
+    /// Manual adds and external opens share the same destination confirmation sheet.
+    var addRequest: AddTorrentRequest?
+
+    func showAddTorrent() {
+        guard isConnected, addRequest == nil else { return }
+        addRequest = AddTorrentRequest()
+    }
+
+    /// Torrents opened from outside wait for both a connection and user confirmation.
     private var incoming = IncomingQueue()
     /// The server the queued torrents were meant for. Switching to another server drops the
     /// queue, so nothing lands on a server the user did not have selected when opening them.
     private var incomingServerID: UUID?
 
-    /// Entry point for Finder "Open" / "Open With" and clicked magnet links. Adds right away
-    /// when connected; otherwise queues them and (re)connects to the last server — the queue
-    /// is flushed by the first successful poll.
+    /// Finder and browser opens must never submit a torrent before choosing its destination.
     func openIncoming(_ urls: [URL]) {
-        let items = urls.compactMap(IncomingTorrent.classify)
+        enqueueIncoming(urls.compactMap(IncomingTorrent.classify))
+    }
+
+    func enqueueIncoming(_ items: [IncomingTorrent]) {
         guard !items.isEmpty else { return }
         if incomingServerID != selectedServerID { _ = incoming.drain() }
         incomingServerID = selectedServerID
-        incoming.enqueue(items)
+        incoming.enqueue(items.filter { $0 != addRequest?.incoming })
         if isConnected {
-            Task { await addPendingIncoming() }
+            presentNextIncoming()
             return
         }
         if connection != .connecting { autoConnectIfNeeded() }
@@ -754,19 +769,10 @@ final class AppModel {
         }
     }
 
-    private func addPendingIncoming() async {
-        guard incomingServerID == selectedServerID else { return }
-        for item in incoming.drain() {
-            await add(item)
-        }
-    }
-
-    /// Adds one incoming torrent — shared by Open With, magnet links and drag & drop.
-    func add(_ item: IncomingTorrent) async {
-        switch item {
-        case .file(let url): await addTorrentFile(url)
-        case .link(let value): await add(filename: value)
-        }
+    func presentNextIncoming() {
+        guard isConnected, addRequest == nil, incomingServerID == selectedServerID,
+              let item = incoming.popFirst() else { return }
+        addRequest = AddTorrentRequest(incoming: item)
     }
 
     /// Adds a `.torrent` file from a URL: security-scoped read + base64 + torrent-add.
@@ -775,8 +781,13 @@ final class AppModel {
     func addTorrentFile(_ url: URL, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return false }
-        return await add(metainfoBase64: data.base64EncodedString(), paused: paused, downloadDir: downloadDir)
+        do {
+            let data = try Data(contentsOf: url)
+            return await add(metainfoBase64: data.base64EncodedString(), paused: paused, downloadDir: downloadDir)
+        } catch {
+            actionError = locError(error)
+            return false
+        }
     }
 
     func applyTorrentSet(_ args: TorrentSetArgs) async {

@@ -22,7 +22,7 @@ let englishStrings: [String: String] = [
     "Beillesztés…": "Paste Mappings…",
     "Importálás": "Import",
     "Távoli útvonal=helyi útvonal, soronként egy.": "Remote path=local path, one mapping per line.",
-    "Csak a helyi Finder-megjelenítést érinti. A megosztásokat előbb kézzel csatold.": "Only affects Show in Finder. Mount your shares manually first.",
+    "A távoli mappák letöltési célként is választhatók. A Finder-megjelenítéshez előbb csatold a megosztásokat.": "Remote folders are also offered as download destinations. Mount shares first to use Show in Finder.",
     "Adj meg abszolút távoli és helyi mappákat; a . és .. nem engedélyezett.": "Enter absolute remote and local folders; . and .. are not allowed.",
     "Egy távoli mappához csak egy hozzárendelés tartozhat.": "Each remote folder can have only one mapping.",
     "Érvénytelen fájlútvonal érkezett a szervertől.": "The server returned an invalid file path.",
@@ -156,6 +156,7 @@ let englishStrings: [String: String] = [
     // Add torrent dialog
     "Torrent hozzáadása": "Add torrent",
     "Magnet link vagy URL": "Magnet link or URL",
+    "Mentés ide:": "Save to:",
     ".torrent fájl választása": "Choose .torrent file",
     "Leállítva add hozzá": "Add paused",
     // Add dialog: per-torrent download folder, favorites and history

@@ -21,11 +21,11 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 
 - Torrent list with columns (name, status, progress, size, ↓/↑ rate, ETA, ratio, peers, added, **last activity**) and fast native sorting
 - **Customizable columns**: right-click the list header to show/hide columns — extra ones: completed on, remaining, downloaded, uploaded, download folder, **seeds / leechers** (connected, and the swarm size the trackers report — e.g. `3 (120)`), tracker, labels; order, widths and visibility are remembered, *Default Columns* resets them
-- Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **tracker**, **download folder** and **label (category)** filters with counts — they combine with each other and the status filter; each section's **All …** row (or clicking the selected row again) clears just that filter
+- Sidebar filters with counts (All / Downloading / Done / Active / Inactive / Stopped / Error), plus **tracker**, **download folder** and **label (category)** filters with counts — they combine with each other and the status filter; each section's **All …** row (or clicking the selected row again) clears just that filter. The list scrolls above a separate status footer, so long tracker lists cannot overlap the connection status or speed graph.
 - Search within the list
 - Add torrents via **magnet link / URL**, **`.torrent` file**, or **drag & drop** onto the window
 - **Choose the download folder** in the Add dialog — a daemon-side path for that torrent only (defaults to the daemon's download folder, which stays unchanged), with per-server **favorite** and **recently used** folders
-- **Open With / double-click** a `.torrent` in Finder, or click a **magnet link** in the browser — added to the current server (queued until connected if the app was closed), without extra windows
+- **Open With / double-click** a `.torrent` in Finder, click a **magnet link**, or drop a torrent onto the window — asks where to save before adding to the current server (queued until connected if the app was closed). The Add dialog offers the remote folders from your server's path mappings, and Cancel submits nothing. Choosing a `.torrent` file in the dialog also waits for Add.
 - Start / stop / remove (optionally along with data), **verify**, and **reannounce** — from the toolbar or the row's **right-click context menu**
 - **Right-click context menu** on torrent rows, which also offers **move** (`torrent-set-location`, with an optional "move the files" switch), **rename** (`torrent-rename-path`), and copy name / hash. A click inside a multi-selection acts on the whole selection, like Finder.
 - **Batch-edit properties** of the selected torrents (right-click → *Properties…*): download / upload limit, honour global speed limits, bandwidth priority, peer limit and labels. Fields where the torrents differ show as *Mixed*; nothing changes unless you edit it. Labels can be **added / removed** (every other label stays) or **replaced** as a whole list (labels need Transmission 3.00+)
@@ -144,6 +144,7 @@ python3 Scripts/uitest/test_path_mappings.py   # Show in Finder via path mapping
 python3 Scripts/uitest/test_file_tree.py       # Files tab tree: expand, folder select/priority (local mock server)
 python3 Scripts/uitest/test_updates.py         # update check + opt-in usage ping (local server)
 python3 Scripts/uitest/test_add_download_dir.py # Add dialog: per-torrent download folder, favorites, history
+bash Scripts/test-add-confirmation.sh          # Offline model regression: opens wait, Cancel never submits, server switches clear queued opens
 python3 Scripts/uitest/test_rules.py "dist/Transmission Remote GUI.app"
 UITEST_DAEMON=tr4 python3 Scripts/uitest/test_rules.py …   # against Transmission 4.x instead of 3.00
 ```

@@ -42,6 +42,12 @@ public struct IncomingQueue: Sendable {
         for item in items where !pending.contains(item) { pending.append(item) }
     }
 
+    /// Takes one item for confirmation; the rest wait until its dialog is dismissed.
+    public mutating func popFirst() -> IncomingTorrent? {
+        guard !pending.isEmpty else { return nil }
+        return pending.removeFirst()
+    }
+
     /// Returns everything queued and empties the queue.
     public mutating func drain() -> [IncomingTorrent] {
         defer { pending = [] }

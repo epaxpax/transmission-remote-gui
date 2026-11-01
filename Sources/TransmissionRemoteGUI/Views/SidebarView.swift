@@ -5,8 +5,19 @@ struct SidebarView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
+        // Reserve space for the footer; tracker rows must stop above it instead of scrolling behind it.
+        VStack(spacing: 0) {
+            filterList
+                .frame(maxHeight: .infinity)
+                .clipped()
+            statusBar
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var filterList: some View {
         @Bindable var model = model
-        List {
+        return List {
             Section(loc("Szűrők")) {
                 ForEach(TorrentFilter.allCases) { filter in
                     Button {
@@ -47,7 +58,6 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .bottom) { statusBar }
     }
 
     /// One value-filter section. Its first row ("All …") clears the filter; clicking the
@@ -131,12 +141,16 @@ struct SidebarView: View {
                     Label(Format.rateOrZero(stats.downloadSpeed ?? 0), systemImage: "arrow.down")
                     Label(Format.rateOrZero(stats.uploadSpeed ?? 0), systemImage: "arrow.up")
                     Spacer()
-                    if let version = model.sessionInfo?.version {
-                        // The SERVER's Transmission daemon version (NOT the app's!) — without the build hash.
-                        Text("Transmission " + version.prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces))
-                            .foregroundStyle(.secondary)
-                            .help(loc("A szerveren futó Transmission daemon verziója"))
-                    }
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+                if let version = model.sessionInfo?.version {
+                    // Keep server metadata out of the speed row so narrow sidebars do not wrap the rates.
+                    Text("Transmission " + version.prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .help(loc("A szerveren futó Transmission daemon verziója"))
                 }
 
                 // Compact speed graph (down/up over time).

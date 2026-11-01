@@ -18,7 +18,7 @@ tiszta lapról írt macOS-újragondolása.
 - Keresés a listában
 - Torrent hozzáadása **magnet linkből / URL-ből**, **`.torrent` fájlból**, valamint **drag & drop**pal az ablakra
 - **Letöltési mappa választása** a hozzáadás ablakban — szerveroldali útvonal csak az adott torrenthez (alapból a daemon letöltési mappája, ami nem változik), szerverenkénti **kedvenc** és **legutóbb használt** mappákkal
-- **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, vagy **magnet link** a böngészőben — az aktuális szerverre kerül (ha az app nem futott, a csatlakozás után), extra ablak nélkül
+- **Megnyitás / dupla klikk** egy `.torrent`-en a Finderben, **magnet link** a böngészőben vagy **drag & drop** — hozzáadás előtt megkérdezi a célmappát (ha az app nem futott, a csatlakozás után). A párbeszédablak felkínálja a szerver útvonal-hozzárendeléseinek távoli mappáit; a Mégse nem ad hozzá torrentet. A fájlválasztás után is a Hozzáadás gombbal kell megerősíteni.
 - Indítás / leállítás / törlés (opcionálisan az adatokkal együtt), **ellenőrzés (verify)** és **újrabejelentés (reannounce)** — a toolbarról vagy a sor **jobbklikk-menüjéből**
 - **Jobbklikk (context) menü** a torrent-sorokon, benne ezen felül **áthelyezés** (`torrent-set-location`, „fájlok átmozgatása" kapcsolóval), **átnevezés** (`torrent-rename-path`), valamint név / hash másolása. A kijelölésen belüli kattintás a teljes kijelölésre hat, mint a Finderben.
 - **Tulajdonságok csoportos szerkesztése** a kijelölt torrenteken (jobb klikk → *Tulajdonságok…*): letöltési / feltöltési korlát, a globális sebességkorlátok figyelembevétele, sávszélesség-prioritás, peer-limit és címkék. Ahol a torrentek eltérnek, *Vegyes* látszik; semmi sem változik, amit nem módosítasz. A címkék **hozzáadhatók / eltávolíthatók** (a többi címke megmarad) vagy **teljes listaként cserélhetők** (címkékhez Transmission 3.00+ kell)
@@ -26,7 +26,7 @@ tiszta lapról írt macOS-újragondolása.
 - **Torrent-szabályok** — trackerenkénti, címkénkénti vagy név szerinti szabályok seed arányra, idle-limitre, sebességkorlátra és címkékre, vagy leállításra. Az első illeszkedő nyer, minden torrent egyszer sorolódik be (a kézi beállítást sosem írja felül), és minden változás előbb **szárazfutásban** látszik. Az arány/idle limitet a daemon tartja be, így zárt app mellett is él. [Képek ↓](#torrent-szabályok)
 - **RSS auto-letöltő** — figyelt feed-ek + cím-szűrő szabályok (tartalmazás vagy `/regex/`) → automatikus torrent-hozzáadás, duplikátum-szűréssel
 - **mTLS kliens-tanúsítvány** hitelesítés (opcionális `.p12` szerverenként) olyan reverse proxyhoz, ami megköveteli
-- **Sebesség-grafikon** — élő mini-chart a sidebarban, részletes **Statisztika panel**, és Stats-szerű **menüsor-popover**
+- **Sebesség-grafikon** — élő mini-chart a sidebarban, részletes **Statisztika panel**, és Stats-szerű **menüsor-popover**. A szűrőlista az állapotsáv felett görgethető, ezért a hosszú trackerlista nem takarja el a kapcsolat adatait és a grafikont.
 - **Sorrendi („streaming") letöltés** (Transmission 4.1+) — a darabok sorrendben töltődnek, így a média nézhető letöltés közben; hivatalos GUI/Web UI még nem tudja
 - **Több szerver**, kezelés a Beállításokban; a jelszó a **Keychain**ben; **induláskori auto-connect** a legutóbbi szerverhez
 - **Megjelenítés a Finderben** szerverenkénti távoli–helyi [útvonal-hozzárendelésekkel](docs/path-mappings.md), csatolt megosztásokhoz (a menüpont akkor jelenik meg, ha a szerverhez van hozzárendelés)

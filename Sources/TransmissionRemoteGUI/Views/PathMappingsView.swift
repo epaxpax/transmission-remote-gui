@@ -24,7 +24,7 @@ struct PathMappingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(loc("Csak a helyi Finder-megjelenítést érinti. A megosztásokat előbb kézzel csatold."))
+            Text(loc("A távoli mappák letöltési célként is választhatók. A Finder-megjelenítéshez előbb csatold a megosztásokat."))
                 .font(.callout).foregroundStyle(.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
