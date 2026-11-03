@@ -277,6 +277,7 @@ final class AppModel {
     }
 
     func disconnect() {
+        addRequest = nil   // a sheet left open must not later submit to whichever server comes next
         stopPolling()
         client = nil
         connection = .disconnected

@@ -115,5 +115,24 @@ struct ConfirmationTests {
         precondition(ConfirmationRPC.submissions.count == 1)
         model.disconnect()
         print("PASS: confirmed destination is sent per torrent; unreadable files report an error")
+
+        let remaining = ServerConfig(name: "Remaining", host: "remaining.invalid", refreshInterval: 3600)
+        model.servers = [server, remaining]
+        model.connect(to: server)
+        for _ in 0..<500 where !model.isConnected {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        model.openIncoming([file])
+        precondition(model.addRequest?.incoming == .file(file))
+        model.deleteServer(server)
+        precondition(model.addRequest == nil, "Deleting the current server kept its confirmation open")
+        model.connect(to: remaining)
+        for _ in 0..<500 where !model.isConnected {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        precondition(model.addRequest == nil, "A confirmation for the deleted server reappeared")
+        precondition(ConfirmationRPC.submissions.count == 1)
+        model.disconnect()
+        print("PASS: PASS4 deleting the current server drops its open confirmation")
     }
 }
