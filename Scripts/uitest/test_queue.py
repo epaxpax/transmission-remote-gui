@@ -145,8 +145,17 @@ def reset_queue(ids):
     time.sleep(1.5)
 
 
+def selected():
+    try:
+        text = ui.ax(f"get value of static text 1 of UI element 1 of (every row of {T} whose selected is true)")
+    except RuntimeError:
+        return set()
+    return set(text.split(", ")) if text else set()
+
 def move(kind, names, expected, ctrl=False):
     select(names)
+    # The Command-click can land a moment later on a slow runner; never open the menu early.
+    ui.wait_for(lambda: selected() == set(names), what=f"selection before queue move {kind}")
     before = state()
     with lock:
         calls.clear()
