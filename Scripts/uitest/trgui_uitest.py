@@ -202,7 +202,15 @@ def osa(script):
         f.write(script)
     if os.path.exists(out):
         os.remove(out)
-    sh("open", "-g", "-W", "-n", "-a", HELPER, "--args", src, out)   # -g: never steal focus
+    # -g: never steal focus. LaunchServices occasionally refuses a launch on a busy machine
+    # (`open` exits 1); like launch(), retry before failing the suite.
+    for attempt in range(4):
+        r = sh("open", "-g", "-W", "-n", "-a", HELPER, "--args", src, out, check=False)
+        if r.returncode == 0 or os.path.exists(out):
+            break
+        time.sleep(1 + attempt)
+    else:
+        raise RuntimeError(f"could not launch {HELPER}: {r.stderr.strip()}")
     wait_for(lambda: os.path.exists(out), timeout=30, step=0.1, what="helper result")
     time.sleep(0.05)
     with open(out) as f:
