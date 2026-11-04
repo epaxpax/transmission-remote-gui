@@ -109,12 +109,28 @@ return values as text""")
 
 
 def select(names):
+    # On the hosted runner a Command-click is occasionally dropped: re-click what is missing.
+    for attempt in range(3):
+        have = selected() if attempt else set()
+        if names[0] in have:
+            click_select([names[0]] + [n for n in names[1:] if n not in have], extend=True)
+        else:
+            click_select(names)
+        try:
+            ui.wait_for(lambda: selected() == set(names), timeout=4, what="selection")
+            return
+        except AssertionError:
+            if attempt == 2:
+                raise
+
+def click_select(names, extend=False):
     # Real modifier-clicks reach NSTableView's selection model; AXSelectedRows does not.
     for index, name in enumerate(names):
         row = shown().index(name) + 1
         x, y = ui.position(f"UI element 1 of row {row} of {T}")
         if index == 0:
-            ui.left_click(x, y)
+            if not extend:
+                ui.left_click(x, y)
         else:
             ui.jxa(f"""ObjC.import("CoreGraphics"); ObjC.import("Foundation");
 function command(down) {{
@@ -154,8 +170,6 @@ def selected():
 
 def move(kind, names, expected, ctrl=False):
     select(names)
-    # The Command-click can land a moment later on a slow runner; never open the menu early.
-    ui.wait_for(lambda: selected() == set(names), what=f"selection before queue move {kind}")
     before = state()
     with lock:
         calls.clear()
