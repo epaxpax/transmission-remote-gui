@@ -36,6 +36,13 @@ func locStatus(_ source: String) -> String { Localization.shared.status(source) 
 /// is appended as-is.
 @MainActor
 func locError(_ error: Error) -> String {
+    if let tracker = error as? TrackerEditError {
+        switch tracker {
+        case .invalidURL: return loc("Adj meg érvényes http, https vagy udp tracker URL-t.")
+        case .torrentMissing: return loc("A torrent megváltozott vagy már nem található. Próbáld újra.")
+        case .incompleteTrackers: return loc("A trackerlista nem érhető el. Frissíts, és próbáld újra.")
+        }
+    }
     guard let rpc = error as? RPCError else { return error.localizedDescription }
     switch rpc {
     case .invalidURL: return loc("Érvénytelen szerver URL.")

@@ -32,6 +32,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Batch-edit properties** of the selected torrents (right-click → *Properties…*): download / upload limit, honour global speed limits, bandwidth priority, peer limit and labels. Fields where the torrents differ show as *Mixed*; nothing changes unless you edit it. Labels can be **added / removed** (every other label stays) or **replaced** as a whole list (labels need Transmission 3.00+)
 - **Details panel** (toggled with ⌘I) with tabs: **General / Files / Peers / Trackers**
   - Peers with **country flags** (bundled, offline country data — see [Peers](#peers)); every Peers / Trackers column is **sortable**, addresses in numeric order
+  - Add or remove a tracker for a single torrent using the + / − buttons below the Trackers table; removal asks for confirmation. Existing URLs and tracker tiers are preserved, with support for Transmission 3.00 and 4.x.
   - **Files as a folder tree**: expand/collapse folders with aggregated size and progress; a folder's checkbox (mixed when partly selected) and priority apply to every file inside in one call; **Show in Finder** for a single file or folder when a path mapping applies
   - **Per-torrent speed limit**; **labels/categories** editing
 - **Torrent rules** — per-tracker, per-label or per-name rules that set seed ratio, idle limit, speed limits and labels, or stop the torrent. First match wins, each torrent is classified once (manual changes are never overwritten), and every change is shown in a **dry run** first. Ratio/idle limits are enforced by the daemon, so they keep working while the app is closed. [Screenshots ↓](#torrent-rules)
@@ -140,6 +141,8 @@ python3 Scripts/uitest/test_context_menu.py    # row context menu on every colum
 python3 Scripts/uitest/test_properties.py      # batch property editor: mixed values, only edited fields sent
 python3 Scripts/uitest/test_columns.py         # header menu: show/hide columns, persistence, reset
 python3 Scripts/uitest/test_queue.py           # queue moves, multi-selection, filtered/sorted lists (tr3 + tr4)
+python3 Scripts/uitest/test_trackers.py        # tracker add/remove, tiers and sidebar cache (tr3 + tr4)
+python3 Scripts/uitest/test_detail_tabs.py     # detail tab selection while switching torrents and loading metadata
 python3 Scripts/uitest/test_filters.py         # sidebar tracker / folder filters, "All" rows
 python3 Scripts/uitest/test_peers.py           # Peers tab: flags, sorting (made-up peers via a local proxy)
 python3 Scripts/uitest/test_path_mappings.py   # Show in Finder via path mappings (local mock server)
@@ -165,7 +168,6 @@ transmission-daemon --foreground --port 9091
 
 ## Roadmap
 
-- Tracker add / remove
 - Watch folder
 - JSON-RPC 2.0 (Transmission 4.1+) support
 

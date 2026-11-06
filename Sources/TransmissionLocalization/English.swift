@@ -1,5 +1,14 @@
 /// Hungarian source keys → English UI strings.
 let englishStrings: [String: String] = [
+    // Tracker editing
+    "Eltávolítás": "Remove",
+    "Tracker hozzáadása": "Add Tracker",
+    "Tracker eltávolítása": "Remove Tracker",
+    "Tracker eltávolítása?": "Remove Tracker?",
+    "Eltávolítod a kijelölt trackert ebből a torrentből?": "Remove the selected tracker from this torrent?",
+    "Tracker URL": "Tracker URL",
+    "Adj meg érvényes http, https vagy udp tracker URL-t.": "Enter a valid http, https or udp tracker URL.",
+    "A trackerlista nem érhető el. Frissíts, és próbáld újra.": "The tracker list is unavailable. Refresh and try again.",
     // Download queue (separate from bandwidth priority and table sorting)
     "Sorpozíció": "Queue Position",
     "Sor elejére": "Move to Top",
@@ -140,6 +149,7 @@ let englishStrings: [String: String] = [
     "Fájlok": "Files",
     "Trackerek": "Trackers",
     "Összes tracker": "All Trackers",
+    "Fájlok betöltése…": "Loading files…",
     "Nincs fájlinformáció": "No file information",
     "Alacsony": "Low",
     "Normál": "Normal",
