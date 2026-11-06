@@ -5,6 +5,15 @@
 /// Terminology follows the Simplified Chinese translation in the original transgui
 /// project where the concepts overlap.
 let simplifiedChineseStrings: [String: String] = [
+    // Tracker editing
+    "Eltávolítás": "移除",
+    "Tracker hozzáadása": "添加 Tracker",
+    "Tracker eltávolítása": "移除 Tracker",
+    "Tracker eltávolítása?": "移除 Tracker？",
+    "Eltávolítod a kijelölt trackert ebből a torrentből?": "要从此种子中移除选中的 Tracker 吗？",
+    "Tracker URL": "Tracker 地址",
+    "Adj meg érvényes http, https vagy udp tracker URL-t.": "请输入有效的 http、https 或 udp Tracker 地址。",
+    "A trackerlista nem érhető el. Frissíts, és próbáld újra.": "Tracker 列表不可用。请刷新后重试。",
     // Download queue
     "Sorpozíció": "队列位置",
     "Sor elejére": "移到顶部",
@@ -138,6 +147,7 @@ let simplifiedChineseStrings: [String: String] = [
     "Fájlok": "文件",
     "Trackerek": "Tracker",
     "Összes tracker": "全部 Tracker",
+    "Fájlok betöltése…": "正在加载文件…",
     "Nincs fájlinformáció": "没有文件信息",
     "Alacsony": "低",
     "Normál": "普通",

@@ -26,7 +26,7 @@ struct ContentView: View {
                     .searchable(text: $model.searchText, placement: .toolbar, prompt: loc("Keresés"))
                 if showInspector {
                     TorrentDetailView()
-                        .frame(minWidth: 260, idealWidth: 300, maxWidth: 400)
+                        .frame(minWidth: 340, idealWidth: 400, maxWidth: .infinity)
                 }
             }
         }

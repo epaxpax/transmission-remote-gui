@@ -31,6 +31,7 @@
 - 种子行的**右键菜单**还支持**移动**（`torrent-set-location`，可选择是否实际移动文件）、**重命名**（`torrent-rename-path`）以及复制名称／哈希值；与 Finder 一样，在多选范围内点击时，操作会作用于整个选中范围
 - **详细信息面板**（⌘I 显示或隐藏），包含**常规／文件／节点／Tracker**标签页
   - 节点显示**国家／地区旗帜**（使用内置的离线国家／地区数据，详见[节点](#节点)）；节点和 Tracker 标签页的所有列均可**排序**，地址按数值顺序排列
+  - 在 Tracker 表格下方通过 + / − 按钮为单个种子添加或移除 Tracker，移除前需确认。保留已有地址和 Tracker 分组，支持 Transmission 3.00 和 4.x。
   - 按文件选择是否下载并设置优先级；设置**单个种子的速度限制**；编辑**标签／分类**
 - **种子规则**——根据 Tracker、标签或名称设置做种分享率、空闲时间限制、速度限制和标签，或停止种子；按顺序采用第一条匹配的规则，每个种子只自动归类一次（不会覆盖手动修改），所有变更都会先通过**预演**展示；分享率／空闲时间限制由服务端执行，因此关闭 App 后仍然生效。[截图 ↓](#种子规则)
 - **RSS 自动下载器**——订阅源配合标题匹配规则（子字符串或 `/regex/`）自动添加种子，并避免重复添加
@@ -136,6 +137,8 @@ python3 Scripts/uitest/test_open_with.py       # 打开方式／Magnet 链接
 python3 Scripts/uitest/test_context_menu.py    # 在每一列中测试种子行的右键菜单
 python3 Scripts/uitest/test_columns.py         # 表头菜单：列显示／隐藏、持久化、恢复默认
 python3 Scripts/uitest/test_queue.py           # 队列调整、多选及筛选／排序后的操作（tr3 和 tr4）
+python3 Scripts/uitest/test_trackers.py        # tracker add/remove, tiers and sidebar cache (tr3 + tr4)
+python3 Scripts/uitest/test_detail_tabs.py     # detail tab selection while switching torrents and loading metadata
 python3 Scripts/uitest/test_filters.py         # 侧边栏 Tracker／文件夹筛选，以及“全部”行
 python3 Scripts/uitest/test_peers.py           # 节点标签页：旗帜、排序（通过本地代理提供虚构节点）
 python3 Scripts/uitest/test_path_mappings.py   # 通过路径映射在 Finder 中显示（本地模拟服务器）
@@ -154,7 +157,6 @@ transmission-daemon --foreground --port 9091
 
 ## 后续计划
 
-- 添加／删除 Tracker
 - 监视文件夹（Watch folder）
 - 支持 JSON-RPC 2.0（Transmission 4.1+）
 

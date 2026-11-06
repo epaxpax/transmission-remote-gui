@@ -38,6 +38,8 @@ final class AppModel {
     private(set) var labelGroups: [SidebarGroups.Entry] = []
     /// Trackers per torrent id, fetched apart from the list poll (see `mergeTrackers`).
     private var trackersByID: [Int: (trackers: [Tracker], stats: [TrackerStat])] = [:]
+    private var trackerRevision = 0
+    private(set) var trackerEditsInFlight: Set<Int> = []
     private var trackersFetchedAt: Date?
     /// Trackers rarely change, so the full tracker fetch runs this seldom; new torrents
     /// get theirs on the very next poll.
@@ -265,6 +267,8 @@ final class AppModel {
         completedIDs = []
         completedSeeded = false   // on a new server, do not notify about already-finished torrents
         speedHistory = []
+        trackerRevision += 1
+        trackerEditsInFlight = []
         trackersByID = [:]        // another server's torrent ids mean other torrents
         trackersFetchedAt = nil
         sessionInfo = nil
@@ -366,12 +370,13 @@ final class AppModel {
     /// for ids not seen yet, plus a full refresh every `trackerRefreshInterval`. A failed
     /// query is simply retried on the next poll — the filter is never worth a failed refresh.
     private func mergeTrackers(into listed: [Torrent], client: RPCClient) async -> [Torrent] {
+        let revision = trackerRevision
         let stale = trackersFetchedAt.map { Date().timeIntervalSince($0) > Self.trackerRefreshInterval } ?? true
         let missing = stale ? [] : listed.map(\.id).filter { trackersByID[$0] == nil }
         if stale || !missing.isEmpty,
            let rows = try? await client.torrentGet(fields: TorrentFields.trackers,
                                                    ids: stale ? .all : .ids(missing.map { .id($0) })),
-           isCurrent(client) {
+           isCurrent(client), trackerRevision == revision {
             if stale { trackersByID = [:]; trackersFetchedAt = Date() }
             for row in rows { trackersByID[row.id] = (row.trackers ?? [], row.trackerStats ?? []) }
         }
@@ -494,11 +499,29 @@ final class AppModel {
             detailTorrent = nil
             return
         }
+        let revision = trackerRevision
         if detailTorrent?.id != id { detailTorrent = nil }
         if let detail = try? await client.torrentGet(fields: TorrentFields.detail, ids: .ids([.id(id)])).first,
-           isCurrent(client), singleSelectedTorrent?.id == id {
+           isCurrent(client), trackerRevision == revision, singleSelectedTorrent?.id == id {
             detailTorrent = detail
         }
+    }
+
+    /// Only one tracker edit per torrent at a time; a switched server cannot receive an old edit.
+    func editTracker(_ edit: TrackerEdit, torrentID: Int, serverID: UUID?) async throws {
+        guard selectedServerID == serverID else { throw CancellationError() }
+        guard let client else { throw RPCError.transport(loc("Nincs kapcsolat")) }
+        guard !trackerEditsInFlight.contains(torrentID) else { return }
+        trackerEditsInFlight.insert(torrentID)
+        defer {
+            if isCurrent(client) { trackerEditsInFlight.remove(torrentID) }
+        }
+        try await client.editTracker(edit, torrentID: torrentID, rpcVersion: sessionInfo?.rpcVersion)
+        guard isCurrent(client) else { return }
+        // Reject tracker/detail responses already in flight and re-fetch this cache entry now.
+        trackerRevision += 1
+        trackersByID.removeValue(forKey: torrentID)
+        await refresh()
     }
 
     // MARK: - Szabályok
