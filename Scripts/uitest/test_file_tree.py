@@ -137,6 +137,21 @@ def main():
         ui.click(f'(first radio button of {TG} whose description is "Files")'); time.sleep(2)
 
         ui.wait_for(lambda: exists("files.row.Show/S01/"), what="the tree's folder rows")
+        # A narrow inspector must keep names usable and metadata on one line.
+        divider = "splitter 1 of splitter group 1 of group 2 of splitter group 1 of group 1 of window 1"
+        x, y = ui.position(divider)
+        ui.drag(x, y, x + 500, y)
+        narrow = int(ui.ax(f"return item 1 of (get size of {TG})"))
+        check("inspector has a usable minimum width", narrow >= 320, narrow)
+        root_height = int(ui.ax_id("files.row.Show/", "return item 2 of (get size of e)"))
+        check("narrow file rows stay compact", root_height <= 60, root_height)
+        x, y = ui.position(divider)
+        ui.drag(x, y, x - 240, y)
+        wide = int(ui.ax(f"return item 1 of (get size of {TG})"))
+        check("inspector can grow beyond its former 400-point limit", wide > 400, wide)
+        x, y = ui.position(divider)
+        ui.drag(x, y, x + 500, y)
+
         check("a lone root folder starts expanded", exists("files.row.Show/Extras/"))
         check("nested folders start collapsed", not exists("files.row.Show/S01/e01.mkv"))
         press("files.disclosure.Show/S01/")

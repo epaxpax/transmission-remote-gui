@@ -1228,5 +1228,6 @@ await testDownloadDirectories(t)
 await testTorrentProperties(t)
 await testFileTree(t)
 await testQueue(t)
+await testTrackerEditing(t)
 
 exit(Int32(t.summary()))

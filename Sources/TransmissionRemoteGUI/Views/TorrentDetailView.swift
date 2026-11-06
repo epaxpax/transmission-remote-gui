@@ -3,6 +3,11 @@ import TransmissionKit
 
 struct TorrentDetailView: View {
     @Environment(AppModel.self) private var model
+    @State private var selectedTab: DetailTab = .general
+
+    private enum DetailTab {
+        case general, files, peers, trackers
+    }
 
     var body: some View {
         Group {
@@ -10,15 +15,23 @@ struct TorrentDetailView: View {
                 // The detail fetch may still belong to the previous selection: only use it
                 // when it is for this torrent, otherwise show the list row until it arrives.
                 let torrent = model.detailTorrent.flatMap { $0.id == selected.id ? $0 : nil } ?? selected
-                TabView {
+                TabView(selection: $selectedTab) {
                     GeneralTab(torrent: torrent)
                         .tabItem { Label(loc("Általános"), systemImage: "info.circle") }
+                        .tag(DetailTab.general)
                     FilesTab(torrent: torrent)
                         .tabItem { Label(loc("Fájlok"), systemImage: "doc.on.doc") }
+                        .tag(DetailTab.files)
                     PeersTab(peers: torrent.peers ?? [])
                         .tabItem { Label(loc("Peerek"), systemImage: "person.2") }
-                    TrackersTab(trackers: torrent.trackerStats ?? [])
-                        .tabItem { Label(loc("Trackerek"), systemImage: "antenna.radiowaves.left.and.right") }
+                        .tag(DetailTab.peers)
+                    VStack(spacing: 0) {
+                        // Reset the editor for each target without replacing the tab itself.
+                        TrackersTab(torrent: torrent, serverID: model.selectedServerID)
+                            .id("\(model.selectedServerID?.uuidString ?? "")-\(torrent.id)")
+                    }
+                    .tabItem { Label(loc("Trackerek"), systemImage: "antenna.radiowaves.left.and.right") }
+                    .tag(DetailTab.trackers)
                 }
                 .padding(8)
             } else {
@@ -192,35 +205,54 @@ private struct FilesTab: View {
     /// Expanded folder ids per torrent; a torrent without an entry uses the default.
     @State private var expandedByTorrent: [String: Set<String>] = [:]
 
-    private var torrentKey: String { torrent.hashString ?? "#\(torrent.id)" }
+    /// Keep the last visible tree until the newly selected torrent has file metadata.
+    @State private var lastLoadedTorrent: Torrent?
+
+    private var isLoading: Bool { torrent.files == nil }
+    private var displayedTorrent: Torrent {
+        isLoading ? (lastLoadedTorrent ?? torrent) : torrent
+    }
+    private var torrentKey: String { displayedTorrent.hashString ?? "#\(displayedTorrent.id)" }
 
     var body: some View {
-        let files = torrent.files ?? []
-        if files.isEmpty {
-            Text(loc("Nincs fájlinformáció")).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            let roots = FileTree.build(files: files, stats: torrent.fileStats)
-            let expanded = expandedByTorrent[torrentKey] ?? FileTree.defaultExpanded(roots)
-            let canShowInFinder = TorrentRowMenu.isVisible(.showInFinder,
-                hasPathMappings: !(model.selectedServer?.pathMappings ?? []).isEmpty)
-            List(FileTree.visibleRows(roots, expanded: expanded)) { node in
-                FileTreeRow(node: node,
-                            isExpanded: expanded.contains(node.id),
-                            toggleExpanded: { toggleExpanded(node, current: expanded) },
-                            setWanted: { setWanted(node, wanted: $0) },
-                            setPriority: { setPriority(node, priority: $0) })
-                    .contextMenu {
-                        if canShowInFinder {
-                            Button(loc("Megjelenítés a Finderben")) { showInFinder(node) }
-                        }
+        let files = displayedTorrent.files ?? []
+        let roots = FileTree.build(files: files, stats: displayedTorrent.fileStats)
+        let expanded = expandedByTorrent[torrentKey] ?? FileTree.defaultExpanded(roots)
+        let canShowInFinder = TorrentRowMenu.isVisible(.showInFinder,
+            hasPathMappings: !(model.selectedServer?.pathMappings ?? []).isEmpty)
+        // Keep the native list (and its background) alive while the next detail fetch is pending.
+        List(FileTree.visibleRows(roots, expanded: expanded)) { node in
+            FileTreeRow(node: node,
+                        isExpanded: expanded.contains(node.id),
+                        toggleExpanded: { toggleExpanded(node, current: expanded) },
+                        setWanted: { setWanted(node, wanted: $0) },
+                        setPriority: { setPriority(node, priority: $0) })
+                .contextMenu {
+                    if canShowInFinder && !isLoading {
+                        Button(loc("Megjelenítés a Finderben")) { showInFinder(node) }
                     }
+                }
+        }
+        .accessibilityIdentifier("files.list")
+        .disabled(isLoading)
+        .allowsHitTesting(!isLoading)
+        .onChange(of: torrent, initial: true) { _, updated in
+            if updated.files != nil { lastLoadedTorrent = updated }
+        }
+        .overlay {
+            if isLoading {
+                ProgressView(loc("Fájlok betöltése…"))
+                    .controlSize(.small)
+                    .accessibilityIdentifier("files.loading")
+            } else if files.isEmpty {
+                Text(loc("Nincs fájlinformáció")).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("files.empty")
             }
-            .accessibilityIdentifier("files.list")
         }
     }
 
     private func toggleExpanded(_ node: FileTreeNode, current: Set<String>) {
+        guard !isLoading else { return }
         var next = current
         if next.contains(node.id) { next.remove(node.id) } else { next.insert(node.id) }
         expandedByTorrent[torrentKey] = next
@@ -228,17 +260,19 @@ private struct FilesTab: View {
 
     /// One `torrent-set` for the file or for every file below the folder.
     private func setWanted(_ node: FileTreeNode, wanted: Bool) {
+        guard !isLoading else { return }
         let args = FileTree.wantedArgs(torrentID: torrent.id, indices: node.fileIndices, wanted: wanted)
         Task { await model.applyTorrentSet(args) }
     }
 
     private func setPriority(_ node: FileTreeNode, priority: TorrentFileStat.Priority) {
+        guard !isLoading else { return }
         let args = FileTree.priorityArgs(torrentID: torrent.id, indices: node.fileIndices, priority: priority)
         Task { await model.applyTorrentSet(args) }
     }
 
     private func showInFinder(_ node: FileTreeNode) {
-        guard let serverID = model.selectedServerID else { return }
+        guard !isLoading, let serverID = model.selectedServerID else { return }
         let torrent = torrent
         Task { await model.showInFinder(torrent, entry: node.path, isFile: !node.isDirectory, serverID: serverID) }
     }
@@ -286,7 +320,7 @@ private struct FileTreeRow: View {
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(node.name).lineLimit(1).truncationMode(.middle)
+                Text(node.name).lineLimit(1).truncationMode(.middle).help(node.name)
                 HStack(spacing: 6) {
                     Text(Format.size(node.length))
                     Text(Format.percent(node.progress))
@@ -294,9 +328,10 @@ private struct FileTreeRow: View {
                         Text(node.fileIndices.count == 1 ? loc("1 fájl") : "\(node.fileIndices.count) " + loc("fájl"))
                     }
                 }
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
             if let priority = node.priority {
                 Picker("", selection: Binding(
                     get: { priority },
@@ -397,33 +432,5 @@ private struct PeersTab: View {
             }
         }
         .onAppear { geo.loadIfNeeded() }
-    }
-}
-
-// MARK: - Trackers
-
-private struct TrackersTab: View {
-    let trackers: [TrackerStat]
-    @State private var sortOrder = [KeyPathComparator(\TrackerStat.displayHost)]
-
-    var body: some View {
-        if trackers.isEmpty {
-            Text(loc("Nincs tracker információ")).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            Table(trackers.sorted(using: sortOrder), sortOrder: $sortOrder) {
-                TableColumn(loc("Tracker"), value: \.displayHost) { Text($0.displayHost).lineLimit(1) }
-                TableColumn(loc("Állapot"), value: \.resultSortKey) {
-                    Text(Localization.shared.trackerResult($0.lastAnnounceResult)).lineLimit(1)
-                }
-                TableColumn(loc("Seedek"), value: \.seederSortKey) { t in Text(count(t.seederCount)) }.width(60)
-                TableColumn(loc("Leecherek"), value: \.leecherSortKey) { t in Text(count(t.leecherCount)) }.width(70)
-            }
-        }
-    }
-
-    private func count(_ value: Int?) -> String {
-        guard let value, value >= 0 else { return "—" }
-        return "\(value)"
     }
 }

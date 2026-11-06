@@ -17,7 +17,7 @@ public enum TorrentFields {
     /// Additional fields needed for the detail view.
     public static let detail: [String] = list + [
         "comment", "creator",
-        "files", "fileStats", "peers", "trackerStats", "priorities", "wanted",
+        "files", "fileStats", "peers", "trackers", "trackerStats", "priorities", "wanted",
         "downloadLimit", "downloadLimited", "uploadLimit", "uploadLimited",
     ]
 
@@ -159,6 +159,9 @@ public struct TorrentSetArgs: Encodable, Sendable {
     public var bandwidthPriority: Int?
     /// Maximum connected peers for the torrent.
     public var peerLimit: Int?
+    public var trackerList: String?
+    public var trackerAdd: [String]?
+    public var trackerRemove: [Int]?
 
     public init(ids: RPCIds) {
         self.ids = ids
@@ -180,6 +183,7 @@ public struct TorrentSetArgs: Encodable, Sendable {
         case seedRatioLimit, seedRatioMode, seedIdleLimit, seedIdleMode
         case honorsSessionLimits, bandwidthPriority
         case peerLimit = "peer-limit"
+        case trackerList, trackerAdd, trackerRemove
     }
 }
 
