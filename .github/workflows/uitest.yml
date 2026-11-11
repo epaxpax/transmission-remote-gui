@@ -19,7 +19,7 @@ jobs:
           - daemon: tr4
           - daemon: tr3
     # Apple-silicon only: on the Intel image the app aborts in Metal (paravirtual GPU).
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 40
     env:
       UITEST_DAEMON: ${{ matrix.daemon }}
@@ -29,13 +29,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Swift 6 toolchain (latest Xcode)
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+      - name: Swift 6 toolchain (latest Xcode 26)
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
 
       - name: Transmission 3.00 (cached source build)
         if: matrix.daemon == 'tr3'
         id: tr3cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/tr300
           key: transmission-3.00-${{ runner.os }}-${{ runner.arch }}-v2
@@ -112,7 +112,7 @@ jobs:
           cp "$RUNNER_TEMP"/tr/*.log "$RUNNER_TEMP/diag/" 2>/dev/null || true
           log show --last 10m --style compact --predicate 'process == "TRGUIUITest"' > "$RUNNER_TEMP/diag/app.log" 2>&1 || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: uitest-${{ matrix.daemon }}
