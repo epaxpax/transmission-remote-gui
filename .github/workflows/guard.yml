@@ -4,6 +4,8 @@ name: Guard
 # metadata, and user-facing changes come with a README update.
 on:
   pull_request:
+    # labeled/unlabeled: adding or removing `no-readme` re-runs the readme check.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -46,12 +48,24 @@ jobs:
         run: python3 Scripts/sync-site.py --check
 
   readme:
-    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-readme')
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
+      # The PR's CURRENT labels, not the event's snapshot: a run started before the label
+      # was added could otherwise finish last and leave a stale failure.
+      - name: no-readme label?
+        id: label
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          if gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+               --jq '.labels[].name' | grep -qx no-readme; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; echo "no-readme label set: skipping"
+          fi
       - uses: actions/checkout@v7
+        if: steps.label.outputs.skip != 'true'
         with: { fetch-depth: 0 }
       - name: User-facing changes update the README
+        if: steps.label.outputs.skip != 'true'
         run: |
           changed=$(git diff --name-only "origin/${{ github.base_ref }}...${{ github.event.pull_request.head.sha }}")
           if echo "$changed" | grep -qE '^Sources/(TransmissionRemoteGUI|TransmissionKit)/' \
