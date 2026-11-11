@@ -43,8 +43,13 @@ public enum TorrentSort {
         if kp == \Torrent.seedsSortKey     { return by { $0.seedsSortKey } }
         if kp == \Torrent.leechersSortKey  { return by { $0.leechersSortKey } }
         // Folder / labels / tracker: natural sorting, like the name.
-        let textKeys: [KeyPath<Torrent, String>] = [\.folderText, \.labelsText, \.trackerText]
-        if let textKey = textKeys.first(where: { $0 == kp }) {
+        // Compared literal by literal, like the keys above: with the Xcode 26.6 SDK the
+        // comparator's key path is Sendable, and a plain `[KeyPath]` array no longer compares.
+        let textKey: KeyPath<Torrent, String>? =
+            kp == \Torrent.folderText ? \.folderText :
+            kp == \Torrent.labelsText ? \.labelsText :
+            kp == \Torrent.trackerText ? \.trackerText : nil
+        if let textKey {
             let text: (Torrent) -> String = { $0[keyPath: textKey] }
             return items.sorted {
                 let r = text($0).localizedStandardCompare(text($1))
