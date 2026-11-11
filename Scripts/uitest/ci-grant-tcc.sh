@@ -13,6 +13,7 @@ SYS="/Library/Application Support/com.apple.TCC/TCC.db"
 USR="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
 grant sudo "$SYS" kTCCServiceAccessibility
 grant sudo "$SYS" kTCCServicePostEvent
+grant sudo "$SYS" kTCCServiceScreenCapture   # screencapture -R in context_menu_items (macOS 26 enforces it)
 grant "$USR" kTCCServiceAppleEvents com.apple.systemevents
 grant "$USR" kTCCServiceAppleEvents com.apple.finder
 grant "$USR" kTCCServicePostEvent
