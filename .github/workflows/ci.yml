@@ -11,8 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Swift 6 toolchain (latest Xcode)
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+      - name: Swift 6 toolchain (Xcode 26, experiment)
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
 
       - name: Swift version
         run: swift --version
@@ -31,3 +31,14 @@ jobs:
 
       - name: Torrent text-cell layout
         run: bash Scripts/uitest/test_text_cell_layout.sh
+
+      - name: Toolchain (experiment)
+        run: xcodebuild -version; xcrun --show-sdk-version
+
+      - name: App bundle (experiment, for a visual check)
+        run: ./Scripts/build-app.sh && (cd dist && ditto -c -k --keepParent "Transmission Remote GUI.app" app-xcode26.zip)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-xcode26
+          path: dist/app-xcode26.zip

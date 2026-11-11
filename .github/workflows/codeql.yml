@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Select Xcode 16
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4

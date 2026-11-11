@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Swift 6 toolchain (latest Xcode)
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
 
       - name: Transmission 3.00 (cached source build)
         if: matrix.daemon == 'tr3'
