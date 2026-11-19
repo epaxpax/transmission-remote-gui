@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import TransmissionKit
@@ -20,6 +21,7 @@ struct ServerEditView: View {
     @State private var clientCertPassword = ""
     @State private var showCertImporter = false
     @State private var pathMappings: [PathMappingDraft] = []
+    @State private var watchFolderPath = ""
 
     private var isEditing: Bool { server != nil }
 
@@ -55,6 +57,8 @@ struct ServerEditView: View {
                 .tabItem { Text(loc("Csatlakozás")) }
                 PathMappingsView(rows: $pathMappings)
                     .tabItem { Text(loc("Útvonal-hozzárendelések")) }
+                watchFolderTab
+                    .tabItem { Text(loc("Figyelt mappa")) }
             }
             .fileImporter(isPresented: $showCertImporter,
                           allowedContentTypes: [UTType(filenameExtension: "p12") ?? .data,
@@ -68,7 +72,8 @@ struct ServerEditView: View {
                     .keyboardShortcut(.cancelAction)
                 Button(isEditing ? loc("Mentés") : loc("Hozzáadás")) { save() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty || host.isEmpty || !mappingsAreValid)
+                    .disabled(name.isEmpty || host.isEmpty || !mappingsAreValid || !watchFolderIsValid || watchFolderInUse)
+                    .accessibilityIdentifier("server.save")
             }
             .padding(.top, 12)
         }
@@ -90,6 +95,61 @@ struct ServerEditView: View {
         clientCertPath = server.clientCertPath ?? ""
         clientCertPassword = server.clientCertPassword ?? ""
         pathMappings = (server.pathMappings ?? []).map(PathMappingDraft.init)
+        watchFolderPath = server.watchFolderPath ?? ""
+    }
+
+    private var watchFolderTab: some View {
+        Form {
+            Section {
+                TextField(loc("Helyi mappa"), text: $watchFolderPath,
+                          prompt: Text(loc("Nincs kiválasztott mappa")))
+                    .accessibilityIdentifier("watchFolder.path")
+                HStack {
+                    Button(loc("Tallózás…"), action: chooseWatchFolder)
+                        .accessibilityIdentifier("watchFolder.choose")
+                    Button(loc("Eltávolítás")) { watchFolderPath = "" }
+                        .disabled(watchFolderPath.isEmpty)
+                        .accessibilityIdentifier("watchFolder.clear")
+                }
+                if !watchFolderIsValid {
+                    Text(loc("Adj meg egy / jellel kezdődő helyi útvonalat."))
+                        .foregroundStyle(.red)
+                } else if watchFolderInUse {
+                    Text(loc("Ezt a mappát már egy másik szerver figyeli."))
+                        .foregroundStyle(.red)
+                }
+            } footer: {
+                Text(loc("Az app futása közben a mappába kerülő .torrent fájlok automatikusan erre a szerverre kerülnek. A szerver az alapértelmezett letöltési mappáját használja."))
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func chooseWatchFolder() {
+        let panel = NSOpenPanel()
+        panel.title = loc("Figyelt mappa")
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        if watchFolderPath.hasPrefix("/") { panel.directoryURL = WatchFolders.folderURL(for: watchFolderPath) }
+        panel.begin { response in
+            if response == .OK, let folder = panel.url {
+                watchFolderPath = WatchFolders.folderURL(for: folder.path).path
+            }
+        }
+    }
+
+    private var watchFolderIsValid: Bool { watchFolderPath.isEmpty || watchFolderPath.hasPrefix("/") }
+
+    private var watchFolderInUse: Bool {
+        guard watchFolderPath.hasPrefix("/") else { return false }
+        let folder = WatchFolders.folderURL(for: watchFolderPath)
+        return model.servers.contains {
+            guard $0.id != server?.id, let path = $0.watchFolderPath else { return false }
+            return WatchFolders.sameFolder(folder, WatchFolders.folderURL(for: path))
+        }
     }
 
     private var mappingsAreValid: Bool {
@@ -97,7 +157,8 @@ struct ServerEditView: View {
     }
 
     private func save() {
-        guard let mappings = try? PathMapping.validated(pathMappings.filter { !$0.isEmpty }.map(\.mapping)) else { return }
+        guard watchFolderIsValid, !watchFolderInUse,
+              let mappings = try? PathMapping.validated(pathMappings.filter { !$0.isEmpty }.map(\.mapping)) else { return }
         let config = ServerConfig(
             id: server?.id ?? UUID(),
             name: name,
@@ -110,7 +171,8 @@ struct ServerEditView: View {
             refreshInterval: refreshInterval,
             clientCertPath: clientCertPath.isEmpty ? nil : clientCertPath,
             clientCertPassword: clientCertPassword.isEmpty ? nil : clientCertPassword,
-            pathMappings: mappings.isEmpty ? nil : mappings
+            pathMappings: mappings.isEmpty ? nil : mappings,
+            watchFolderPath: watchFolderPath.isEmpty ? nil : WatchFolders.folderURL(for: watchFolderPath).path
         )
         model.addOrUpdate(server: config)
         // Connect to a new server right away.

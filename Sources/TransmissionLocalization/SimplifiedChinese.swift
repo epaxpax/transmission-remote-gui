@@ -5,6 +5,12 @@
 /// Terminology follows the Simplified Chinese translation in the original transgui
 /// project where the concepts overlap.
 let simplifiedChineseStrings: [String: String] = [
+    // Watch folder
+    "Figyelt mappa": "监听文件夹",
+    "Nincs kiválasztott mappa": "未选择文件夹",
+    "Ezt a mappát már egy másik szerver figyeli.": "这个文件夹已绑定到另一台服务器。",
+    "Az app futása közben a mappába kerülő .torrent fájlok automatikusan erre a szerverre kerülnek. A szerver az alapértelmezett letöltési mappáját használja.": "App 运行期间，放入此文件夹的 .torrent 文件会自动添加到这台服务器。下载内容保存到服务器的默认下载目录。",
+    "Adj meg egy / jellel kezdődő helyi útvonalat.": "请输入以 / 开头的本地路径。",
     // Tracker editing
     "Eltávolítás": "移除",
     "Tracker hozzáadása": "添加 Tracker",

@@ -138,6 +138,7 @@ private struct ServersSettingsTab: View {
                     if let s = selectedServer { sheet = .edit(s) }
                 }
                 .disabled(selection == nil)
+                .accessibilityIdentifier("servers.edit")
 
                 Button(loc("Csatlakozás")) {
                     if let s = selectedServer { model.connect(to: s) }
@@ -159,6 +160,7 @@ private struct ServersSettingsTab: View {
                 .foregroundStyle(isCurrent && model.isConnected ? .green : .secondary)
             VStack(alignment: .leading, spacing: 1) {
                 Text(server.name)
+                    .accessibilityIdentifier("servers.name." + server.id.uuidString)
                 Text("\(server.host):\(server.port)")
                     .font(.caption).foregroundStyle(.secondary)
             }

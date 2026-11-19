@@ -1,5 +1,11 @@
 /// Hungarian source keys → English UI strings.
 let englishStrings: [String: String] = [
+    // Watch folder
+    "Figyelt mappa": "Watch Folder",
+    "Nincs kiválasztott mappa": "No folder selected",
+    "Ezt a mappát már egy másik szerver figyeli.": "This folder is already watched for another server.",
+    "Az app futása közben a mappába kerülő .torrent fájlok automatikusan erre a szerverre kerülnek. A szerver az alapértelmezett letöltési mappáját használja.": "While the app is running, .torrent files placed here are added to this server. The server uses its default download folder.",
+    "Adj meg egy / jellel kezdődő helyi útvonalat.": "Enter a local path starting with /.",
     // Tracker editing
     "Eltávolítás": "Remove",
     "Tracker hozzáadása": "Add Tracker",
