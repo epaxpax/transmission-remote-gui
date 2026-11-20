@@ -116,4 +116,93 @@ func testWatchFolder(_ t: TestHarness) async {
             try t.expectEqual(try Data(contentsOf: newMarker), bytes)
         }
     }
+
+    await t.test("A permanent daemon rejection is marked invalid without resubmission") {
+        try await withFolder { folder in
+            let source = folder.appendingPathComponent("corrupt.torrent")
+            let marked = source.appendingPathExtension("invalid")
+            try bytes.write(to: source)
+            var importer = WatchFolderImporter(folder: folder)
+            var calls = 0
+            func submit(_ metainfo: String) throws -> Bool {
+                calls += 1
+                if calls == 1 { throw RPCError.rpcFailure("temporarily unavailable") }
+                throw RPCError.rpcFailure("invalid or corrupt torrent file")
+            }
+            await importer.scan(now: start, submit: submit)
+            await importer.scan(now: start + .seconds(2), submit: submit)
+            try t.expect(fm.fileExists(atPath: source.path), "an unknown RPC failure must keep the source")
+            await importer.scan(now: start + .seconds(32), submit: submit)
+            await importer.scan(now: start + .seconds(70), submit: submit)
+            try t.expectEqual(calls, 2)
+            try t.expectEqual(try Data(contentsOf: marked), bytes)
+            try t.expect(!fm.fileExists(atPath: source.path), "the invalid marker must replace the source name")
+        }
+    }
+
+    await t.test("The size cap skips oversized files and accepts the exact limit") {
+        try await withFolder { folder in
+            let limit = WatchFolderImporter.maximumFileSize
+            let oversized = folder.appendingPathComponent("big.torrent")
+            let boundary = folder.appendingPathComponent("limit.torrent")
+            func create(_ url: URL, size: Int) throws {
+                try Data().write(to: url)
+                let handle = try FileHandle(forWritingTo: url)
+                defer { try? handle.close() }
+                try handle.truncate(atOffset: UInt64(size))
+            }
+            try create(oversized, size: limit + 1)
+            try create(boundary, size: limit)
+            var importer = WatchFolderImporter(folder: folder)
+            var calls = 0
+            func submit(_ metainfo: String) throws -> Bool {
+                calls += 1
+                try t.expectEqual(Data(base64Encoded: metainfo)?.count, limit)
+                return true
+            }
+            let first = await importer.scan(now: start, submit: submit)
+            let later = await importer.scan(now: start + .seconds(2), submit: submit)
+            try t.expectEqual(first, .fileTooLarge("big.torrent"))
+            try t.expectEqual(later, first)
+            try t.expectEqual(calls, 1)
+            try t.expect(fm.fileExists(atPath: oversized.path), "oversized files are left intact")
+            try t.expect(fm.fileExists(atPath: boundary.appendingPathExtension("added").path), "exact limit is allowed")
+        }
+    }
+
+    await t.test("Folder access errors are reported and clear after recovery") {
+        try await withFolder { root in
+            let folder = root.appendingPathComponent("pending", isDirectory: true)
+            var importer = WatchFolderImporter(folder: folder)
+            let missing = await importer.scan(now: start) { _ in false }
+            try t.expectEqual(missing, .cannotReadFolder)
+            try fm.createDirectory(at: folder, withIntermediateDirectories: false)
+            let recovered = await importer.scan(now: start + .seconds(2)) { _ in false }
+            try t.expectEqual(recovered, nil)
+        }
+    }
+
+    await t.test("A failed invalid rename is reported and retried without another RPC") {
+        try await withFolder { folder in
+            let source = folder.appendingPathComponent("denied.torrent")
+            try bytes.write(to: source)
+            defer { try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path) }
+            var importer = WatchFolderImporter(folder: folder)
+            var calls = 0
+            func submit(_ metainfo: String) throws -> Bool {
+                calls += 1
+                try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+                throw RPCError.rpcFailure("invalid or corrupt torrent file")
+            }
+            await importer.scan(now: start, submit: submit)
+            let denied = await importer.scan(now: start + .seconds(2), submit: submit)
+            try t.expectEqual(denied, .cannotRenameFile("denied.torrent"))
+            try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path)
+            let recovered = await importer.scan(now: start + .seconds(32), submit: submit)
+            try t.expectEqual(recovered, nil)
+            try t.expectEqual(calls, 1)
+            try t.expectEqual(try Data(contentsOf: source.appendingPathExtension("invalid")), bytes)
+        }
+    }
+
 }

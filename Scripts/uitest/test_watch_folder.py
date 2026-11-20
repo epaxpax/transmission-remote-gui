@@ -147,9 +147,29 @@ try:
     ui.assert_isolated()
     ui.wait_for(later.with_suffix(".torrent.added").exists, timeout=20, what="import after relaunch")
     check(set(records()) == {name, later_name}, "saved folder resumes on launch and skips marked files")
-    check(bad.exists() and not bad.with_suffix(".torrent.added").exists(), "rejected input stays intact")
+    invalid = bad.with_suffix(".torrent.invalid")
+    ui.wait_for(invalid.exists, timeout=20, what="invalid marker")
+    check(invalid.read_bytes() == b"not a torrent" and not bad.exists(),
+          "the daemon's corrupt-file rejection preserves the contents under an invalid marker")
 
     edit_server()
+    oversized = folder / "oversized.torrent"
+    with oversized.open("wb") as f:
+        f.truncate(10_000_001)
+    ui.wait_for(lambda: ui.id_exists("watchFolder.status", EDIT), what="oversized-file warning")
+    check(oversized.stat().st_size == 10_000_001, "oversized input stays intact")
+    oversized.unlink()
+    ui.wait_for(lambda: not ui.id_exists("watchFolder.status", EDIT), what="cleared oversized-file warning")
+
+    offline = folder.with_name("Watch unavailable")
+    folder.rename(offline)
+    try:
+        ui.wait_for(lambda: ui.id_exists("watchFolder.status", EDIT), what="unreadable-folder warning")
+    finally:
+        offline.rename(folder)
+    ui.wait_for(lambda: not ui.id_exists("watchFolder.status", EDIT), what="cleared folder-access warning")
+    print("  ✓ watch folder status appears and clears as access changes", flush=True)
+
     ui.ax_id("watchFolder.clear", "click e", EDIT)
     save()
     disabled_name, disabled = fixture(folder, "disabled")

@@ -1,11 +1,14 @@
 import Foundation
+import Observation
 import TransmissionKit
 
 /// Owned by the app model, so watching continues with the main window closed.
 @MainActor
+@Observable
 final class WatchFolders {
     private var configured: [ServerConfig] = []
     private var worker: Task<Void, Never>?
+    private(set) var problems: [UUID: WatchFolderImporter.Problem] = [:]
 
     static func folderURL(for path: String) -> URL {
         URL(fileURLWithPath: path, isDirectory: true).resolvingSymlinksInPath().standardizedFileURL
@@ -31,29 +34,36 @@ final class WatchFolders {
         }
         guard configured != next else { return }
         configured = next
+        problems.removeAll()
 
         let previous = worker
         previous?.cancel()
         let targets = Array(zip(next, folders))
-        worker = Task.detached(priority: .utility) {
+        worker = Task.detached(priority: .utility) { [weak self] in
             // Finish old work before a folder can be assigned to another server.
             await previous?.value
             guard !Task.isCancelled else { return }
             await withTaskGroup(of: Void.self) { group in
                 for (server, folder) in targets {
-                    group.addTask {
+                    group.addTask { [weak self] in
                         let client = RPCClient(config: server, session: server.makeSession())
                         var importer = WatchFolderImporter(folder: folder)
                         while !Task.isCancelled {
-                            await importer.scan { metainfo in
+                            let problem = await importer.scan { metainfo in
                                 let result = try await client.torrentAdd(metainfoBase64: metainfo, paused: nil)
                                 return result.added != nil || result.isDuplicate
                             }
+                            await self?.report(problem, for: server.id)
                             try? await Task.sleep(for: WatchFolderImporter.scanInterval)
                         }
                     }
                 }
             }
         }
+    }
+
+    private func report(_ problem: WatchFolderImporter.Problem?, for serverID: UUID) {
+        guard !Task.isCancelled, problems[serverID] != problem else { return }
+        problems[serverID] = problem
     }
 }

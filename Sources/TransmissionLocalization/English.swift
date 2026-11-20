@@ -6,6 +6,10 @@ let englishStrings: [String: String] = [
     "Ezt a mappát már egy másik szerver figyeli.": "This folder is already watched for another server.",
     "Az app futása közben a mappába kerülő .torrent fájlok automatikusan erre a szerverre kerülnek. A szerver az alapértelmezett letöltési mappáját használja.": "While the app is running, .torrent files placed here are added to this server. The server uses its default download folder.",
     "Adj meg egy / jellel kezdődő helyi útvonalat.": "Enter a local path starting with /.",
+    "A figyelt mappa nem olvasható. Ellenőrizd az útvonalat és a macOS fájlhozzáférési engedélyeit.": "Can’t read the watch folder. Check the path and the app’s file access in macOS.",
+    "Nem olvasható a fájl: %@": "Can’t read the file: %@",
+    "Nem nevezhető át a fájl: %@": "Can’t rename the file: %@",
+    "A fájl nagyobb a 10 MB-os korlátnál: %@": "The file exceeds the 10 MB limit: %@",
     // Tracker editing
     "Eltávolítás": "Remove",
     "Tracker hozzáadása": "Add Tracker",

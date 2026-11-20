@@ -117,6 +117,13 @@ struct ServerEditView: View {
                 } else if watchFolderInUse {
                     Text(loc("Ezt a mappát már egy másik szerver figyeli."))
                         .foregroundStyle(.red)
+                } else if let server, watchFolderPath == server.watchFolderPath,
+                          let problem = model.watchFolders.problems[server.id] {
+                    Label(watchFolderMessage(problem), systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("watchFolder.status")
                 }
             } footer: {
                 Text(loc("Az app futása közben a mappába kerülő .torrent fájlok automatikusan erre a szerverre kerülnek. A szerver az alapértelmezett letöltési mappáját használja."))
@@ -125,6 +132,19 @@ struct ServerEditView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func watchFolderMessage(_ problem: WatchFolderImporter.Problem) -> String {
+        switch problem {
+        case .cannotReadFolder:
+            loc("A figyelt mappa nem olvasható. Ellenőrizd az útvonalat és a macOS fájlhozzáférési engedélyeit.")
+        case .cannotReadFile(let name):
+            String(format: loc("Nem olvasható a fájl: %@"), name)
+        case .cannotRenameFile(let name):
+            String(format: loc("Nem nevezhető át a fájl: %@"), name)
+        case .fileTooLarge(let name):
+            String(format: loc("A fájl nagyobb a 10 MB-os korlátnál: %@"), name)
+        }
     }
 
     private func chooseWatchFolder() {
