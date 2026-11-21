@@ -43,7 +43,12 @@ def edit_server():
     ui.wait_for(lambda: ui.id_exists("watchFolder.choose", EDIT), what="watch folder tab")
 
 
+def save_enabled():
+    return ui.ax_id("server.save", "return enabled of e", EDIT) == "true"
+
+
 def save():
+    ui.wait_for(save_enabled, what="enabled Save button")
     geometry = ui.ax_id("server.save", "return {position, size} of e", EDIT)
     x, y, width, height = (float(v) for v in geometry.split(", "))
     ui.left_click(x + width / 2, y + height / 2)
@@ -51,8 +56,8 @@ def save():
     ui.ax(f'click (first button of {SETTINGS} whose subrole is "AXCloseButton")')
 
 
-def paste_path(folder):
-    ui.ax_id("watchFolder.path", "set focused of e to true", EDIT)
+def paste_field(identifier, value):
+    ui.ax_id(identifier, "set focused of e to true", EDIT)
     # Paste in one edit and restore every clipboard format, even on a desktop with an IME.
     ui.jxa("""ObjC.import("AppKit"); ObjC.import("Foundation");
 var board = $.NSPasteboard.generalPasteboard, saved = [];
@@ -66,10 +71,12 @@ for (var i = 0; i < items.count; i++) {
     saved.push(copy);
 }
 board.clearContents;
-board.setStringForType($(""" + json.dumps(str(folder)) + """), $.NSPasteboardTypeString);
+board.setStringForType($(""" + json.dumps(value) + """), $.NSPasteboardTypeString);
 var writtenCount = board.changeCount;
 try {
-    Application("System Events").keystroke("v", {using: ["command down"]});
+    var events = Application("System Events");
+    events.keystroke("a", {using: ["command down"]});
+    events.keystroke("v", {using: ["command down"]});
     $.NSThread.sleepForTimeInterval(0.6);
 } finally {
     if (board.changeCount === writtenCount) {
@@ -78,13 +85,21 @@ try {
     }
 }
 """)
-    ui.wait_for(lambda: ui.ax_id("watchFolder.path", "return value of e", EDIT) == str(folder),
-                what="entered folder path")
+    ui.wait_for(lambda: ui.ax_id(identifier, "return value of e", EDIT) == value,
+                what="entered field value")
     ui.ax("key code 48")  # Leave the field to commit the edit before saving.
 
 
+def paste_path(folder):
+    paste_field("watchFolder.path", str(folder))
+
+
+def saved_server():
+    return json.loads(SERVER_FILE.read_text())[0]
+
+
 def configured_path():
-    return json.loads(SERVER_FILE.read_text())[0].get("watchFolderPath")
+    return saved_server().get("watchFolderPath")
 
 
 def fixture(folder, key):
@@ -115,6 +130,16 @@ try:
     ui.wait_for(lambda: ui.ax('exists window "Watch Folder"') == "true", what="folder picker")
     ui.ax_id("CancelButton", "click e", 'window "Watch Folder"')
     ui.wait_for(lambda: ui.ax('exists window "Watch Folder"') == "false", what="closed picker")
+    blocked = folder.with_name("Watch denied")
+    blocked.mkdir(mode=0)
+    try:
+        paste_path(blocked)
+        ui.wait_for(lambda: ui.id_exists("watchFolder.status", EDIT), what="unsaved unreadable-folder warning")
+        check(not save_enabled() and configured_path() is None, "unreadable new folder blocks Save")
+    finally:
+        blocked.chmod(0o700)
+    ui.wait_for(save_enabled, what="Save enabled after granting folder access")
+    check(not ui.id_exists("watchFolder.status", EDIT), "granting access clears the unsaved path warning")
     paste_path(folder)
     save()
     check(configured_path() is not None and Path(configured_path()).resolve() == folder,
@@ -161,14 +186,30 @@ try:
     oversized.unlink()
     ui.wait_for(lambda: not ui.id_exists("watchFolder.status", EDIT), what="cleared oversized-file warning")
 
-    offline = folder.with_name("Watch unavailable")
-    folder.rename(offline)
+    original_path = configured_path()
+    blocked.chmod(0)
     try:
-        ui.wait_for(lambda: ui.id_exists("watchFolder.status", EDIT), what="unreadable-folder warning")
+        paste_path(blocked)
+        ui.wait_for(lambda: ui.id_exists("watchFolder.status", EDIT), what="unreadable replacement warning")
+        check(not save_enabled() and configured_path() == original_path, "unreadable replacement blocks Save")
     finally:
-        offline.rename(folder)
+        blocked.chmod(0o700)
+    paste_field("watchFolder.path", original_path)
+    ui.wait_for(lambda: not ui.id_exists("watchFolder.status", EDIT), what="warning cleared for the original path")
+
+    folder.chmod(0)
+    try:
+        ui.wait_for(lambda: ui.id_exists("watchFolder.status", EDIT), what="unreadable saved-folder warning")
+        check(save_enabled(), "an unreadable saved folder still allows editing other settings")
+        ui.ax(f'click (first radio button of tab group 1 of group 1 of {EDIT} whose description is "Connect")')
+        paste_field("server.name", "uitest-watch-renamed")
+        save()
+        check(saved_server()["name"] == "uitest-watch-renamed" and configured_path() == original_path,
+              "saving another setting keeps the exact unavailable watch path")
+    finally:
+        folder.chmod(0o700)
+    edit_server()
     ui.wait_for(lambda: not ui.id_exists("watchFolder.status", EDIT), what="cleared folder-access warning")
-    print("  ✓ watch folder status appears and clears as access changes", flush=True)
 
     ui.ax_id("watchFolder.clear", "click e", EDIT)
     save()
