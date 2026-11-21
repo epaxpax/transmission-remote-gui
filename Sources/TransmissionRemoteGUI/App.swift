@@ -159,6 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.applicationIconImage = AppIcon.dockIcon()
         NSApp.activate(ignoringOtherApps: true)
         Notifier.requestAuthorization()
+        model.watchFolders.update(servers: model.servers)
         startMaintenance()
     }
 

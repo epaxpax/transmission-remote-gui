@@ -27,6 +27,7 @@ tiszta lapról írt macOS-újragondolása.
 - Tracker hozzáadása és eltávolítása egy torrentnél a Trackerek táblázat alatti + / − gombokkal; az eltávolítás megerősítést kér. A meglévő URL-ek és trackercsoportok megmaradnak, Transmission 3.00 és 4.x támogatással.
 - **Torrent-szabályok** — trackerenkénti, címkénkénti vagy név szerinti szabályok seed arányra, idle-limitre, sebességkorlátra és címkékre, vagy leállításra. Az első illeszkedő nyer, minden torrent egyszer sorolódik be (a kézi beállítást sosem írja felül), és minden változás előbb **szárazfutásban** látszik. Az arány/idle limitet a daemon tartja be, így zárt app mellett is él. [Képek ↓](#torrent-szabályok)
 - **RSS auto-letöltő** — figyelt feed-ek + cím-szűrő szabályok (tartalmazás vagy `/regex/`) → automatikus torrent-hozzáadás, duplikátum-szűréssel
+- **Figyelt mappa** — A Beállítások → Szerverek → Szerkesztés → Figyelt mappa lapon szerverenként egy helyi mappa választható. Az app futás közben elküldi a még feldolgozatlan `.torrent` fájlokat az adott szerverre, amely az alapértelmezett letöltési mappát használja. A szerver visszaigazolása után a fájl `.torrent.added` végződést kap. A démon által sérültként elutasított fájlok `.torrent.invalid` végződést kapnak. A 10 MB-nál nagyobb fájlokat az app kihagyja, a fájlrendszerhibák pedig a Figyelt mappa lapon jelennek meg.
 - **mTLS kliens-tanúsítvány** hitelesítés (opcionális `.p12` szerverenként) olyan reverse proxyhoz, ami megköveteli
 - **Sebesség-grafikon** — élő mini-chart a sidebarban, részletes **Statisztika panel**, és Stats-szerű **menüsor-popover**. A szűrőlista az állapotsáv felett görgethető, ezért a hosszú trackerlista nem takarja el a kapcsolat adatait és a grafikont.
 - **Sorrendi („streaming") letöltés** (Transmission 4.1+) — a darabok sorrendben töltődnek, így a média nézhető letöltés közben; hivatalos GUI/Web UI még nem tudja
@@ -40,6 +41,8 @@ tiszta lapról írt macOS-újragondolása.
 - **Többnyelvű felület**: angol, magyar és egyszerűsített kínai, futásidőben váltható (Beállítások → Általános); különálló, újrahasznosítható [nyelvi csomagok](docs/localization.md)
 - **Frissítés-ellenőrzés**: naponta egyszer (és az app menüjéből: *Frissítések keresése…*) — az új kiadás csak egy kis link az oldalsávban (nincs felugró ablak), Homebrew-os telepítésnél a `brew upgrade` paranccsal; a *Kihagyom ezt a verziót* megmarad
 - **Bekapcsolható, névtelen használati statisztika** — csak ha bekapcsolod a Beállítások → Általános fülön; lásd [Adatvédelem](https://github.com/epaxpax/transmission-remote-gui/blob/main/README.hu.md#adatvédelem)
+
+Ha a Maces app bezárása után is figyelni szeretnél egy mappát a szerveren, állítsd be a Transmission démon `watch-dir` és `watch-dir-enabled` beállításait. Ezek RPC-n keresztül nem érhetők el.
 
 ## Torrent-szabályok
 
@@ -156,7 +159,6 @@ transmission-daemon --foreground --port 9091
 
 ## Későbbi lehetőségek
 
-- Watch-folder
 - JSON-RPC 2.0 (Transmission 4.1+) támogatás
 
 ## Licenc

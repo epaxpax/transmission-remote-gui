@@ -1229,5 +1229,6 @@ await testTorrentProperties(t)
 await testFileTree(t)
 await testQueue(t)
 await testTrackerEditing(t)
+await testWatchFolder(t)
 
 exit(Int32(t.summary()))

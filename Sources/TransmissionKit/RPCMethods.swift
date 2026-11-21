@@ -352,8 +352,9 @@ public extension RPCClient {
     }
 
     /// Add a torrent from the contents of a `.torrent` file (base64 metainfo).
+    /// Pass nil for paused to honour the daemon’s start-added-torrents setting.
     @discardableResult
-    func torrentAdd(metainfoBase64: String, paused: Bool = false, downloadDir: String? = nil) async throws -> TorrentAddResult {
+    func torrentAdd(metainfoBase64: String, paused: Bool? = false, downloadDir: String? = nil) async throws -> TorrentAddResult {
         let args = TorrentAddArgs(filename: nil, metainfo: metainfoBase64, paused: paused, downloadDir: downloadDir)
         return try await send(method: "torrent-add", arguments: args)
     }

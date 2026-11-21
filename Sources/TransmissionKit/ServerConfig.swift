@@ -21,6 +21,8 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
     public var clientCertPassword: String?
     /// Client-only path mappings. Optional so pre-mapping servers.json files still decode.
     public var pathMappings: [PathMapping]?
+    /// Optional local directory for automatic .torrent submission to this server.
+    public var watchFolderPath: String?
 
     public init(
         id: UUID = UUID(),
@@ -34,7 +36,8 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
         refreshInterval: Double = 3,
         clientCertPath: String? = nil,
         clientCertPassword: String? = nil,
-        pathMappings: [PathMapping]? = nil
+        pathMappings: [PathMapping]? = nil,
+        watchFolderPath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -48,6 +51,7 @@ public struct ServerConfig: Codable, Identifiable, Hashable, Sendable {
         self.clientCertPath = clientCertPath
         self.clientCertPassword = clientCertPassword
         self.pathMappings = pathMappings
+        self.watchFolderPath = watchFolderPath
     }
 
     /// The full RPC endpoint URL.

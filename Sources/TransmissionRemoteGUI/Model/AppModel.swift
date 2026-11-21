@@ -18,6 +18,7 @@ final class AppModel {
     var selectedServerID: ServerConfig.ID? {
         didSet { persistSelectedServer() }   // most recently used server, for auto-connect
     }
+    let watchFolders = WatchFolders()
     private static let selectedServerKey = "selectedServerID"
     /// Add dialog favorite / recent download directories per server (see `AppModel+DownloadDirs`).
     var downloadDirsByServer: [UUID: DownloadDirectories] = DownloadDirStore.load()
@@ -880,12 +881,14 @@ final class AppModel {
             servers.append(server)
         }
         ServerStore.save(servers)
+        watchFolders.update(servers: servers)
     }
 
     func deleteServer(_ server: ServerConfig) {
         servers.removeAll { $0.id == server.id }
         Keychain.delete(for: server.id)
         ServerStore.save(servers)
+        watchFolders.update(servers: servers)
         forgetDownloadDirs(for: server.id)
         if selectedServerID == server.id {
             disconnect()

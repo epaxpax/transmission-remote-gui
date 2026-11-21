@@ -37,6 +37,7 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
   - **Per-torrent speed limit**; **labels/categories** editing
 - **Torrent rules** — per-tracker, per-label or per-name rules that set seed ratio, idle limit, speed limits and labels, or stop the torrent. First match wins, each torrent is classified once (manual changes are never overwritten), and every change is shown in a **dry run** first. Ratio/idle limits are enforced by the daemon, so they keep working while the app is closed. [Screenshots ↓](#torrent-rules)
 - **RSS auto-downloader** — watched feeds + title-match rules (substring or `/regex/`) → automatic torrent add, with dedup
+- **Watch folder** — In Settings → Servers → Edit → Watch Folder, choose one local folder per server. While the app is running, it submits unprocessed `.torrent` files in that folder to that server using its default download directory and renames files to `.torrent.added` once the server confirms receipt. Files the daemon rejects as corrupt are renamed to `.torrent.invalid`. Files larger than 10 MB are skipped, and the Watch Folder tab shows filesystem problems.
 - **mTLS client-certificate** authentication (optional `.p12` per server) for a reverse proxy that requires it
 - **Speed graph** — a live mini-chart in the sidebar, a detailed **Statistics panel**, and a Stats-style **menu-bar popover**
 - **Sequential ("streaming") download** (Transmission 4.1+) — pieces download in order so media can be watched while still downloading; no official GUI/Web UI exposes this yet
@@ -50,6 +51,8 @@ classic [transgui](https://github.com/transmission-remote-gui/transgui) (Lazarus
 - **Multilingual UI**: English, Hungarian and Simplified Chinese, switchable at runtime (Settings → General); separate, reusable [language packs](docs/localization.md)
 - **Update check**: once a day (and from the app menu: *Check for Updates…*) — a new release shows as a small link in the sidebar (no pop-ups), with the `brew upgrade` command for Homebrew installs; *Skip This Version* is remembered
 - **Opt-in, anonymous usage statistics** — off unless you switch it on in Settings → General; see [Privacy](https://github.com/epaxpax/transmission-remote-gui#privacy)
+
+To monitor a folder on the server while the Mac app is closed, configure Transmission’s built-in `watch-dir` and `watch-dir-enabled` on the daemon. Those settings are not exposed over RPC.
 
 ## Torrent rules
 
@@ -168,7 +171,6 @@ transmission-daemon --foreground --port 9091
 
 ## Roadmap
 
-- Watch folder
 - JSON-RPC 2.0 (Transmission 4.1+) support
 
 ## License
