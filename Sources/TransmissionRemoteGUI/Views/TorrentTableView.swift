@@ -14,6 +14,9 @@ struct TorrentTableView: NSViewRepresentable {
     var effective: AppLanguage = .hungarian   // for tracking language changes (column header refresh)
     var serverID: UUID?
     var hasPathMappings = false
+    var labelsSupported = false
+    var labelChoices: [String] = []
+    var onSetLabels: (Int, [String]) -> Void = { _, _ in }
     /// Invoked when a context-menu command is chosen. The targeted torrents are captured
     /// when the menu opens, so the command never depends on the selection binding having
     /// propagated back to SwiftUI in the meantime.
@@ -394,6 +397,15 @@ struct TorrentTableView: NSViewRepresentable {
                     let c = ProgressCell(); c.identifier = id; return c
                 }()
                 cell.configure(value: t.progress, error: t.hasError, scale: parent.scale)
+                return cell
+            } else if spec.id == "labels" && parent.labelsSupported {
+                let id = NSUserInterfaceItemIdentifier("labelPickerCell")
+                let cell = (tableView.makeView(withIdentifier: id, owner: nil) as? LabelPickerCell) ?? {
+                    let c = LabelPickerCell(); c.identifier = id; return c
+                }()
+                cell.configure(labels: t.labels ?? [], choices: parent.labelChoices, fontSize: fontSize) { labels in
+                    self.parent.onSetLabels(t.id, labels)
+                }
                 return cell
             } else {
                 let id = NSUserInterfaceItemIdentifier("textCell")

@@ -60,6 +60,7 @@ let englishStrings: [String: String] = [
     "perc": "min",
     "Torrent kész": "Torrent finished",
     "Kilépés": "Quit",
+    "Beállítások…": "Settings…",
     "Nagyítás": "Zoom in",
     "Kicsinyítés": "Zoom out",
     "Eredeti méret": "Actual size",
@@ -372,6 +373,9 @@ let englishStrings: [String: String] = [
     "Alkalmaz": "Apply",
     // Labels / categories
     "Címkék": "Labels",
+    "Nincs címke": "No label",
+    "Létrehozás": "Create",
+    "Új címke…": "New label…",
     "Összes címke": "All Labels",
     "Új címke": "New label",
     "Hozzáad": "Add",

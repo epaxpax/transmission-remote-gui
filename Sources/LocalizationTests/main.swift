@@ -42,19 +42,21 @@ defer { defaults.removePersistentDomain(forName: suite) }
 let l10n = Localization(defaults: defaults, preferredLanguages: { ["zh-Hans-CN"] })
 let englishPack = AppLanguage.english.pack!
 let simplifiedChinesePack = AppLanguage.simplifiedChinese.pack!
+let frenchPack = AppLanguage.french.pack!
 
 print("Language selection and persistence")
 let preferences: [([String], AppLanguage)] = [
     ([], .english), (["en"], .english), (["en-US"], .english),
     (["en-GB"], .english), (["hu-HU"], .hungarian),
+    (["fr"], .french), (["fr-FR"], .french), (["fr-CA"], .french),
     (["zh"], .simplifiedChinese), (["zh-Hans"], .simplifiedChinese),
     (["zh-Hans-CN"], .simplifiedChinese), (["zh_CN"], .simplifiedChinese),
     (["zh-SG"], .simplifiedChinese), (["ZH-hans"], .simplifiedChinese),
     (["zh-Hant"], .english), (["zh-TW"], .english), (["zh-HK"], .english),
     (["zh-MO"], .english), (["zh-Hant-CN"], .english),
-    (["fr-FR", "zh-Hans"], .simplifiedChinese),
-    (["fr-FR", "hu"], .hungarian), (["hu", "zh-Hans"], .hungarian),
-    (["en", "zh-Hans"], .english), (["de-DE", "fr-FR"], .english),
+    (["fr-FR", "zh-Hans"], .french),
+    (["fr-FR", "hu"], .french), (["hu", "zh-Hans"], .hungarian),
+    (["en", "zh-Hans"], .english), (["de-DE", "fr-FR"], .french),
     (["zh-Hant", "zh-Hans"], .simplifiedChinese),
 ]
 for (codes, expected) in preferences {
@@ -80,9 +82,10 @@ t.test("Unknown stored value falls back to system") {
     defaults.set("unknown-future-language", forKey: "appLanguage")
     try t.equal(Localization(defaults: defaults).language, .system)
 }
-t.test("Language picker has unique IDs and a native Chinese name") {
+t.test("Language picker has unique IDs and native language names") {
     try t.equal(Set(AppLanguage.allCases.map(\.id)).count, AppLanguage.allCases.count)
     try t.equal(AppLanguage.simplifiedChinese.title, "简体中文")
+    try t.equal(AppLanguage.french.title, "Français")
 }
 
 print("\nDictionary coverage and fallback")
@@ -103,6 +106,8 @@ t.test("Every static loc() call has a Chinese translation") {
     try t.expect(keys.count > 200, "Source scan must find the UI strings")
     let missing = keys.filter { (simplifiedChinesePack.strings[$0] ?? "").isEmpty }.sorted()
     try t.equal(missing, [])
+    let missingFrench = keys.filter { (frenchPack.strings[$0] ?? "").isEmpty }.sorted()
+    try t.equal(missingFrench, [])
 }
 for (key, expected) in englishPack.strings.sorted(by: { $0.key < $1.key }) {
     t.test("English unchanged and Chinese covered: \(key)") {
@@ -148,6 +153,19 @@ for language in AppLanguage.allCases {
     }
 }
 
+t.test("Every English key has a French translation") {
+    let missing = englishPack.strings.keys.filter {
+        (frenchPack.strings[$0] ?? "").isEmpty
+    }.sorted()
+    try t.equal(missing, [])
+}
+
+t.test("French locale and language detection") {
+    try t.equal(AppLanguage.resolve(preferredLanguages: ["fr-FR"]), .french)
+    l10n.language = .french
+    try t.equal(l10n.locale.identifier, "fr_FR")
+}
+
 print("\nTorrent statuses (separate from labels)")
 for entry in TorrentRowMenu.layout {
     t.test("Row menu command translated: \(entry.command)") {
@@ -181,6 +199,22 @@ for (status, english, chinese) in statuses {
         l10n.language = .hungarian; try t.equal(l10n.status(status.text), status.text)
     }
 }
+t.test("All seven torrent statuses are translated into French") {
+    let expected: [String: String] = [
+        "Leállítva": "Arrêté",
+        "Ellenőrzésre vár": "En attente de vérification",
+        "Ellenőrzés": "Vérification",
+        "Letöltésre vár": "En attente de téléchargement",
+        "Letöltés": "Téléchargement",
+        "Seedelésre vár": "En attente de partage",
+        "Seedelés": "En partage"
+    ]
+    l10n.language = .french
+    for (key, value) in expected {
+        try t.equal(l10n.status(key), value)
+    }
+}
+
 for progress in [0.0, 0.45, 1.0] {
     t.test("Verifying preserves progress \(progress)") {
         var torrent = Torrent(id: 1)
@@ -190,6 +224,8 @@ for progress in [0.0, 0.45, 1.0] {
         try t.equal(l10n.status(torrent.statusText), "Verifying " + Format.percent(progress))
         l10n.language = .simplifiedChinese
         try t.equal(l10n.status(torrent.statusText), "校验 " + Format.percent(progress))
+        l10n.language = .french
+        try t.equal(l10n.status(torrent.statusText), "Vérification " + Format.percent(progress))
         l10n.language = .hungarian
         try t.equal(l10n.status(torrent.statusText), torrent.statusText)
     }
@@ -198,6 +234,9 @@ t.test("Download tab and downloading status do not collide") {
     l10n.language = .simplifiedChinese
     try t.equal(l10n.text("Letöltés"), "下载")
     try t.equal(l10n.status("Letöltés"), "下载中")
+    l10n.language = .french
+    try t.equal(l10n.text("Letöltés"), "Téléchargement")
+    try t.equal(l10n.status("Letöltés"), "Téléchargement")
     try t.equal(l10n.status("custom daemon status"), "custom daemon status")
 }
 t.test("Known tracker success translated, arbitrary diagnostics untouched") {

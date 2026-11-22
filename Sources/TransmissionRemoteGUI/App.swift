@@ -5,6 +5,7 @@ import TransmissionKit
 @main
 struct TransmissionRemoteGUIApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
     /// Owned by the app delegate, so Finder / browser open events (which AppKit delivers to the
     /// delegate, possibly before any window exists) can reach it.
     private var model: AppModel { appDelegate.model }
@@ -36,13 +37,21 @@ struct TransmissionRemoteGUIApp: App {
                     .keyboardShortcut("0", modifiers: .command)
                 Divider()
             }
+            CommandGroup(replacing: .appSettings) {
+                Button(loc("Beállítások…")) {
+                    openWindow(id: "settings")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
         }
 
-        Settings {
+        Window("Réglages", id: "settings") {
             SettingsView()
                 .environment(model)
-                .frame(width: 520, height: 460)
+                .frame(minWidth: 520, minHeight: 460)
         }
+        .defaultSize(width: 760, height: 650)
+        .windowResizability(.contentMinSize)
 
         // Menu bar (tray) icon: shows down/up speed in the bar; the popover shows a live
         // speed graph + stats (Stats-app style) and window/quit controls.

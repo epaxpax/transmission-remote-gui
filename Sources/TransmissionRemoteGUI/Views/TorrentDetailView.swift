@@ -158,7 +158,36 @@ private struct LabelsEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Divider().padding(.vertical, 4)
-            Text(loc("Címkék")).font(.callout.bold())
+            HStack {
+                Text(loc("Címkék")).font(.callout.bold())
+                Spacer()
+                let currentLabels = torrent.labels ?? []
+                Menu {
+                    Button {
+                        replaceLabels([])
+                    } label: {
+                        Label(loc("Nincs címke"), systemImage: currentLabels.isEmpty ? "checkmark" : "tag")
+                    }
+                    if !model.labelGroups.isEmpty { Divider() }
+                    ForEach(model.labelGroups, id: \.value) { entry in
+                        Button {
+                            toggle(entry.value)
+                        } label: {
+                            Label(entry.value, systemImage: currentLabels.contains(entry.value) ? "checkmark" : "tag")
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(currentLabels.isEmpty ? loc("Nincs címke") : currentLabels.joined(separator: ", "))
+                            .lineLimit(1).truncationMode(.middle)
+                        Image(systemName: "chevron.down").font(.caption)
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 5)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                }
+                .menuStyle(.borderlessButton)
+                .accessibilityIdentifier("detail.labels.picker")
+            }
             ForEach(torrent.labels ?? [], id: \.self) { label in
                 HStack(spacing: 6) {
                     Image(systemName: "tag").foregroundStyle(.secondary)
@@ -182,10 +211,27 @@ private struct LabelsEditor: View {
     private func add() {
         let t = newLabel.trimmingCharacters(in: .whitespaces)
         newLabel = ""
-        guard !t.isEmpty else { return }
+        add(t)
+    }
+
+    private func add(_ label: String) {
+        let value = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
         var labels = torrent.labels ?? []
-        guard !labels.contains(t) else { return }
-        labels.append(t)
+        guard !labels.contains(value) else { return }
+        labels.append(value)
+        Task { await model.setLabels(labels, ids: .ids([.id(torrent.id)])) }
+    }
+
+    private func toggle(_ label: String) {
+        var labels = Set(torrent.labels ?? [])
+        if labels.contains(label) { labels.remove(label) }
+        else { labels.insert(label) }
+        replaceLabels(labels.sorted())
+    }
+
+    private func replaceLabels(_ labels: [String]) {
+        guard labels != (torrent.labels ?? []) else { return }
         Task { await model.setLabels(labels, ids: .ids([.id(torrent.id)])) }
     }
 
