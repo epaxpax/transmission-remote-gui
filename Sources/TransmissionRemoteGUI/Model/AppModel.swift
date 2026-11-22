@@ -3,6 +3,11 @@ import AppKit
 import Observation
 import TransmissionKit
 
+enum AppAppearanceMode: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: Self { self }
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -52,6 +57,10 @@ final class AppModel {
     private(set) var freeSpace: Int?
 
     // UI state
+    var appearanceMode: AppAppearanceMode = .system {
+        didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: Self.appearanceModeKey) }
+    }
+    private static let appearanceModeKey = "appearanceMode"
     var filter: TorrentFilter = .all { didSet { recomputeDisplayed() } }
     var searchText: String = "" { didSet { recomputeDisplayed() } }
     /// Optional label (category) filter, chosen in the sidebar. nil = no label filter.
@@ -165,6 +174,10 @@ final class AppModel {
     }
 
     init() {
+        if let raw = UserDefaults.standard.string(forKey: Self.appearanceModeKey),
+           let saved = AppAppearanceMode(rawValue: raw) {
+            self.appearanceMode = saved
+        }
         if let saved = UserDefaults.standard.object(forKey: Self.uiScaleKey) as? Double {
             self.uiScale = Self.scaleRange.clamped(saved)
         }
