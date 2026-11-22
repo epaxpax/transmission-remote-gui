@@ -405,6 +405,9 @@ let frenchStrings: [String: String] = [
 
     // Labels
     "Címkék": "Étiquettes",
+    "Nincs címke": "Aucune étiquette",
+    "Létrehozás": "Créer",
+    "Új címke…": "Nouvelle étiquette…",
     "Összes címke": "Toutes les étiquettes",
     "Új címke": "Nouvelle étiquette",
     "Hozzáad": "Ajouter",

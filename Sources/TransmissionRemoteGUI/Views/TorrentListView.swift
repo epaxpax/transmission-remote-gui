@@ -35,6 +35,9 @@ struct TorrentListView: View {
                         effective: Localization.shared.effective,  // header refreshes on language change
                         serverID: model.selectedServerID,
                         hasPathMappings: !(model.selectedServer?.pathMappings ?? []).isEmpty,
+                        labelsSupported: model.labelsSupported,
+                        labelChoices: model.labelGroups.map(\.value),
+                        onSetLabels: { id, labels in Task { await model.setLabels(labels, ids: .ids([.id(id)])) } },
                         onCommand: handle
                     )
                 }

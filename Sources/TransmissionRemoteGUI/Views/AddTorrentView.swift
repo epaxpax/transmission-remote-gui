@@ -13,6 +13,8 @@ struct AddTorrentView: View {
     @State private var isAdding = false
     /// Daemon-side destination for this torrent only; prefilled with the daemon's default.
     @State private var downloadDir = ""
+    @State private var selectedLabels: Set<String> = []
+    @State private var newLabel = ""
 
     init(incoming: IncomingTorrent? = nil) {
         switch incoming {
@@ -54,6 +56,8 @@ struct AddTorrentView: View {
 
             downloadDirSection
 
+            if model.labelsSupported { labelsSection }
+
             HStack {
                 Button {
                     fileImporter = true
@@ -82,7 +86,7 @@ struct AddTorrentView: View {
         .disabled(isAdding)
         .interactiveDismissDisabled(isAdding)
         .padding(20)
-        .frame(width: 520, height: 350)
+        .frame(width: 520, height: model.labelsSupported ? 440 : 350)
         .fileImporter(
             isPresented: $fileImporter,
             allowedContentTypes: [UTType(filenameExtension: "torrent") ?? .data]
@@ -94,6 +98,56 @@ struct AddTorrentView: View {
         .onAppear { prefillDownloadDir() }
         // Session info may arrive after the sheet opened: fill in the default if still empty.
         .onChange(of: model.defaultDownloadDir) { prefillDownloadDir() }
+    }
+
+    private var labelsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(loc("Címkék")).font(.callout).foregroundStyle(.secondary)
+            Menu {
+                Button(loc("Nincs címke"), systemImage: selectedLabels.isEmpty ? "checkmark" : "") {
+                    selectedLabels.removeAll()
+                }
+                if !model.labelGroups.isEmpty {
+                    Divider()
+                    ForEach(model.labelGroups, id: \.value) { entry in
+                        Button {
+                            toggleLabel(entry.value)
+                        } label: {
+                            Label(entry.value, systemImage: selectedLabels.contains(entry.value) ? "checkmark" : "tag")
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(selectedLabels.isEmpty ? loc("Nincs címke") : selectedLabels.sorted().joined(separator: ", "))
+                        .lineLimit(1).truncationMode(.middle)
+                    Spacer()
+                    Image(systemName: "chevron.down").font(.caption)
+                }
+                .padding(.horizontal, 8).padding(.vertical, 5)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+            }
+            .accessibilityIdentifier("add.labels")
+            HStack(spacing: 6) {
+                TextField(loc("Új címke"), text: $newLabel)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("add.label.new")
+                Button(loc("Létrehozás"), action: createLabel)
+                    .disabled(newLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    private func toggleLabel(_ label: String) {
+        if selectedLabels.contains(label) { selectedLabels.remove(label) }
+        else { selectedLabels.insert(label) }
+    }
+
+    private func createLabel() {
+        let label = newLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !label.isEmpty else { return }
+        selectedLabels.insert(label)
+        newLabel = ""
     }
 
     // MARK: - Download directory
@@ -215,15 +269,19 @@ struct AddTorrentView: View {
         let target = resolvedDownloadDir()
         isAdding = true
         Task {
-            let added: Bool
+            let result: TorrentAddResult?
             if let torrentFile {
-                added = await model.addTorrentFile(torrentFile, paused: paused, downloadDir: target.dir)
+                result = await model.addTorrentFile(torrentFile, paused: paused, downloadDir: target.dir)
             } else {
-                added = await model.add(filename: value, paused: paused, downloadDir: target.dir)
+                result = await model.add(filename: value, paused: paused, downloadDir: target.dir)
             }
             isAdding = false
-            if added {
+            if let result {
                 target.record()
+                // Duplicate responses never overwrite the existing torrent's labels.
+                if let id = result.added?.id, !selectedLabels.isEmpty {
+                    await model.setLabels(selectedLabels.sorted(), ids: .ids([.id(id)]))
+                }
                 dismiss()
             }
         }

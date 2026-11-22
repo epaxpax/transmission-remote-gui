@@ -328,7 +328,7 @@ final class AppModel {
                   let (data, _) = try? await URLSession.shared.data(from: url) else { continue }
             for item in RSSParser.parse(data)
             where !rss.isSeen(item.guid) && rss.titleMatchesAnyRule(item.title) {
-                await add(filename: item.link)     // magnet or .torrent URL
+                _ = await add(filename: item.link) // magnet or .torrent URL
                 rss.markSeen(item.guid)            // mark regardless, so we don't retry every pass
             }
         }
@@ -748,14 +748,12 @@ final class AppModel {
     }
 
     /// `downloadDir` applies to this torrent only (nil = the daemon's default); returns success.
-    @discardableResult
-    func add(filename: String, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
-        await perform { _ = try await $0.torrentAdd(filename: filename, paused: paused, downloadDir: downloadDir) }
+    func add(filename: String, paused: Bool = false, downloadDir: String? = nil) async -> TorrentAddResult? {
+        await performResult { try await $0.torrentAdd(filename: filename, paused: paused, downloadDir: downloadDir) }
     }
 
-    @discardableResult
-    func add(metainfoBase64: String, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
-        await perform { _ = try await $0.torrentAdd(metainfoBase64: metainfoBase64, paused: paused, downloadDir: downloadDir) }
+    func add(metainfoBase64: String, paused: Bool = false, downloadDir: String? = nil) async -> TorrentAddResult? {
+        await performResult { try await $0.torrentAdd(metainfoBase64: metainfoBase64, paused: paused, downloadDir: downloadDir) }
     }
 
     struct AddTorrentRequest: Identifiable {
@@ -806,8 +804,7 @@ final class AppModel {
 
     /// Adds a `.torrent` file from a URL: security-scoped read + base64 + torrent-add.
     /// Shared path for the Add dialog and drag & drop.
-    @discardableResult
-    func addTorrentFile(_ url: URL, paused: Bool = false, downloadDir: String? = nil) async -> Bool {
+    func addTorrentFile(_ url: URL, paused: Bool = false, downloadDir: String? = nil) async -> TorrentAddResult? {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
@@ -815,7 +812,7 @@ final class AppModel {
             return await add(metainfoBase64: data.base64EncodedString(), paused: paused, downloadDir: downloadDir)
         } catch {
             actionError = locError(error)
-            return false
+            return nil
         }
     }
 
@@ -864,6 +861,18 @@ final class AppModel {
         } catch {
             actionError = message(for: error)
             return false
+        }
+    }
+
+    private func performResult<T>(_ action: (RPCClient) async throws -> T) async -> T? {
+        guard let client else { return nil }
+        do {
+            let result = try await action(client)
+            await refresh()
+            return result
+        } catch {
+            actionError = message(for: error)
+            return nil
         }
     }
 
