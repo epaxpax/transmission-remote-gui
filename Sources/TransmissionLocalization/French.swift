@@ -80,6 +80,9 @@ let frenchStrings: [String: String] = [
     // Language / settings
     "Rendszer": "Système",
     "Nyelv": "Langue",
+    "Megjelenés": "Apparence",
+    "Világos": "Clair",
+    "Sötét": "Sombre",
     "Általános": "Général",
     "Szerverek": "Serveurs",
     "Sebesség": "Vitesse",

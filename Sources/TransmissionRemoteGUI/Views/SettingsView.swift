@@ -129,12 +129,21 @@ struct SettingsView: View {
 /// Language picker — switches immediately — plus the
 /// update check and the opt-in usage statistics.
 private struct GeneralSettingsTab: View {
+    @Environment(AppModel.self) private var model
     @Bindable private var l10n = Localization.shared
     @Bindable private var updates = UpdateChecker.shared
     @Bindable private var stats = UsageStats.shared
 
     var body: some View {
+        @Bindable var model = model
         Form {
+            Picker(loc("Megjelenés"), selection: $model.appearanceMode) {
+                Text(loc("Rendszer")).tag(AppAppearanceMode.system)
+                Text(loc("Világos")).tag(AppAppearanceMode.light)
+                Text(loc("Sötét")).tag(AppAppearanceMode.dark)
+            }
+            .pickerStyle(.menu)
+
             Picker(loc("Nyelv"), selection: $l10n.language) {
                 ForEach(AppLanguage.allCases) { lang in
                     Text(lang == .system ? loc("Rendszer") : lang.title).tag(lang)

@@ -67,6 +67,9 @@ let englishStrings: [String: String] = [
     // Language / settings
     "Rendszer": "System",
     "Nyelv": "Language",
+    "Megjelenés": "Appearance",
+    "Világos": "Light",
+    "Sötét": "Dark",
     "Általános": "General",
     "Szerverek": "Servers",
     "Sebesség": "Speed",

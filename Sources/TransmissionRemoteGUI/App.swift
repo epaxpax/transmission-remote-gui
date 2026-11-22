@@ -17,7 +17,7 @@ struct TransmissionRemoteGUIApp: App {
         WindowGroup(id: Self.mainWindowID) {
             ContentView()
                 .environment(model)
-
+                .preferredColorScheme(model.appearanceMode.colorScheme)
                 .frame(minWidth: 960, minHeight: 560)
         }
         .windowToolbarStyle(.unified)
@@ -48,6 +48,7 @@ struct TransmissionRemoteGUIApp: App {
         Window("Réglages", id: "settings") {
             SettingsView()
                 .environment(model)
+                .preferredColorScheme(model.appearanceMode.colorScheme)
                 .frame(minWidth: 520, minHeight: 460)
         }
         .defaultSize(width: 760, height: 650)
@@ -57,10 +58,22 @@ struct TransmissionRemoteGUIApp: App {
         // speed graph + stats (Stats-app style) and window/quit controls.
         MenuBarExtra {
             MenuBarContent(model: model)
+                .preferredColorScheme(model.appearanceMode.colorScheme)
         } label: {
             MenuBarLabel(model: model, delegate: appDelegate)
+                .preferredColorScheme(model.appearanceMode.colorScheme)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+private extension AppAppearanceMode {
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
     }
 }
 
