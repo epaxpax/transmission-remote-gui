@@ -5,25 +5,120 @@ import TransmissionLocalization
 /// The daemon's global settings (`session-get` / `session-set`), in a tabbed layout.
 /// Every control applies the change on the server immediately (`updateSession`), then
 /// reloads the fresh state — so external changes are visible right away too.
+
+@MainActor
+private enum SettingsTab: String, CaseIterable {
+    case general, servers, speed, peers, network, queues, downloads, seeding
+
+    var title: String {
+        switch self {
+        case .general: return loc("Általános")
+        case .servers: return loc("Szerverek")
+        case .speed: return loc("Sebesség")
+        case .peers: return loc("Peerek")
+        case .network: return loc("Hálózat")
+        case .queues: return loc("Sorok")
+        case .downloads: return loc("Letöltés")
+        case .seeding: return loc("Seedelés")
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .servers: return "server.rack"
+        case .speed: return "speedometer"
+        case .peers: return "person.2"
+        case .network: return "network"
+        case .queues: return "list.number"
+        case .downloads: return "arrow.down.circle"
+        case .seeding: return "arrow.up.circle"
+        }
+    }
+
+    var requiresSession: Bool {
+        self != .general && self != .servers
+    }
+}
+
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @State private var selectedTab: SettingsTab = .general
+
+    private var availableTabs: [SettingsTab] {
+        SettingsTab.allCases.filter {
+            !$0.requiresSession || model.sessionInfo != nil
+        }
+    }
 
     var body: some View {
-        TabView {
-            // General (language) — always available.
-            GeneralSettingsTab().tabItem { Label(loc("Általános"), systemImage: "gearshape") }
+        VStack(spacing: 0) {
+            GeometryReader { geometry in
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) {
+                        ForEach(availableTabs, id: \.self) { tab in
+                            Button {
+                                selectedTab = tab
+                            } label: {
+                                VStack(spacing: 5) {
+                                    Image(systemName: tab.icon)
+                                        .font(.system(size: 21))
 
-            // Server management — available without a connection (connecting starts here).
-            ServersSettingsTab().tabItem { Label(loc("Szerverek"), systemImage: "server.rack") }
+                                    Text(tab.title)
+                                        .font(.system(size: 12))
+                                        .lineLimit(1)
+                                        .fixedSize()
+                                }
+                                .foregroundStyle(
+                                    selectedTab == tab ? Color.accentColor : Color.secondary
+                                )
+                                .frame(minWidth: 76, minHeight: 62)
+                                .background {
+                                    if selectedTab == tab {
+                                        RoundedRectangle(cornerRadius: 11)
+                                            .fill(Color.accentColor.opacity(0.10))
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .frame(minWidth: geometry.size.width)
+                    .frame(height: 78)
+                    .padding(.horizontal, 12)
+                }
+                .scrollIndicators(.hidden)
+            }
+            .frame(height: 78)
 
-            // The daemon's global settings — only with a live connection.
-            if model.sessionInfo != nil {
-                SpeedSettingsTab().tabItem { Label(loc("Sebesség"), systemImage: "speedometer") }
-                PeerSettingsTab().tabItem { Label(loc("Peerek"), systemImage: "person.2") }
-                NetworkSettingsTab().tabItem { Label(loc("Hálózat"), systemImage: "network") }
-                QueueSettingsTab().tabItem { Label(loc("Sorok"), systemImage: "list.number") }
-                DownloadSettingsTab().tabItem { Label(loc("Letöltés"), systemImage: "arrow.down.circle") }
-                SeedingSettingsTab().tabItem { Label(loc("Seedelés"), systemImage: "arrow.up.circle") }
+            Divider()
+
+            Group {
+                switch selectedTab {
+                case .general:
+                    GeneralSettingsTab()
+                case .servers:
+                    ServersSettingsTab()
+                case .speed:
+                    SpeedSettingsTab()
+                case .peers:
+                    PeerSettingsTab()
+                case .network:
+                    NetworkSettingsTab()
+                case .queues:
+                    QueueSettingsTab()
+                case .downloads:
+                    DownloadSettingsTab()
+                case .seeding:
+                    SeedingSettingsTab()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .onChange(of: model.sessionInfo != nil) { _, connected in
+            if !connected && selectedTab.requiresSession {
+                selectedTab = .general
             }
         }
     }
@@ -45,7 +140,7 @@ private struct GeneralSettingsTab: View {
                     Text(lang == .system ? loc("Rendszer") : lang.title).tag(lang)
                 }
             }
-            .pickerStyle(.inline)
+            .pickerStyle(.menu)
 
             Section(loc("Frissítések")) {
                 HStack {

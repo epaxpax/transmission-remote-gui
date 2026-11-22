@@ -76,6 +76,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>${MIN_MACOS}</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <!-- .torrent files: offered in Finder "Open With" (Alternate: we do not take over the default). -->
     <key>CFBundleDocumentTypes</key>

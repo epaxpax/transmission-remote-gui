@@ -3,7 +3,7 @@ import Observation
 
 /// Raw values are persisted; keep the existing system/hungarian/english values stable.
 public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
-    case system, hungarian, english, simplifiedChinese
+    case system, hungarian, english, simplifiedChinese, french
     public var id: String { rawValue }
 
     public var title: String { pack?.title ?? "System" }
@@ -17,6 +17,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
             return LanguagePack(title: "Magyar", localeIdentifier: "hu_HU", languageCodes: ["hu"])
         case .english: return englishPack
         case .simplifiedChinese: return simplifiedChinesePack
+        case .french: return frenchPack
         }
     }
 
