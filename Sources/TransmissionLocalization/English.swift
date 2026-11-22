@@ -60,6 +60,7 @@ let englishStrings: [String: String] = [
     "perc": "min",
     "Torrent kész": "Torrent finished",
     "Kilépés": "Quit",
+    "Beállítások…": "Settings…",
     "Nagyítás": "Zoom in",
     "Kicsinyítés": "Zoom out",
     "Eredeti méret": "Actual size",

@@ -72,6 +72,7 @@ let frenchStrings: [String: String] = [
     "perc": "min",
     "Torrent kész": "Téléchargement terminé",
     "Kilépés": "Quitter",
+    "Beállítások…": "Réglages…",
     "Nagyítás": "Agrandir",
     "Kicsinyítés": "Réduire",
     "Eredeti méret": "Taille réelle",
