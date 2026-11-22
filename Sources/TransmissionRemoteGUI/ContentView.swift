@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var removeConfirm = false
     /// Whether the Details inspector is visible. Hidden by default; toggled via ⌘I / toolbar button. Persistent.
     @AppStorage("showInspector") private var showInspector = false
+    @AppStorage("inspectorWidth") private var inspectorWidth = 340.0
 
     var body: some View {
         @Bindable var model = model
@@ -24,10 +25,19 @@ struct ContentView: View {
                 TorrentListView()
                     .frame(minWidth: 420)
                     .searchable(text: $model.searchText, placement: .toolbar, prompt: loc("Keresés"))
-                if showInspector {
+                if showInspector && !model.selection.isEmpty {
                     TorrentDetailView()
-                        .frame(minWidth: 340, idealWidth: 400, maxWidth: .infinity)
+                        .frame(minWidth: 340, idealWidth: CGFloat(inspectorWidth), maxWidth: 460)
+                        .background {
+                            GeometryReader { geometry in
+                                Color.clear.preference(key: InspectorPanelWidthKey.self, value: geometry.size.width)
+                            }
+                        }
                 }
+            }
+            .onPreferenceChange(InspectorPanelWidthKey.self) { width in
+                guard width >= 340, width <= 460, abs(Double(width) - inspectorWidth) > 1 else { return }
+                inspectorWidth = Double(width)
             }
         }
         .toolbar { toolbarContent }
@@ -202,6 +212,15 @@ struct ContentView: View {
             .keyboardShortcut("i", modifiers: .command)
             .help(loc("Részletek panel megjelenítése/elrejtése (⌘I)"))
         }
+    }
+}
+
+private struct InspectorPanelWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
     }
 }
 
